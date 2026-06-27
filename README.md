@@ -43,6 +43,16 @@ Electron 模式會自動開啟 Remote 視窗，無需手動打開瀏覽器。
 
 可在 Remote 的「OBS 操作說明 → 更換 Port」永久設定連接埠；重新啟動 App 後生效。
 
+#### macOS 未簽章開發版
+
+目前自行打包的開發版尚未經 Apple Developer ID 簽章與公證。若確認 App 是由本專案可信任的原始碼建置，卻顯示「應用程式已損毀」，將 App 拖入「應用程式」後可執行：
+
+```bash
+xattr -dr com.apple.quarantine "/Applications/OBS Timer Remote.app"
+```
+
+這會移除該 App 的下載隔離標記；請勿對來源不明的軟體使用。正式公開發布應使用 Developer ID 簽章與 Apple notarization，而不是要求使用者停用安全檢查。
+
 ### 方式三：打包成獨立應用
 
 ```bash

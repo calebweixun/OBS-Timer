@@ -34,8 +34,9 @@
       flex-direction: column;
       overflow: hidden;
       padding: 0;
-      max-width: 920px;
-      margin: 0 auto;
+      width: 100%;
+      max-width: none;
+      margin: 0;
     }
 
     /* Desktop-only frameless window chrome (Spotify-inspired) */
@@ -47,10 +48,17 @@
     .desktop-app .app-titlebar { display:flex; }
     .app-mark { width:18px; height:18px; border-radius:5px; background:var(--green); color:#061006; display:grid; place-items:center; font-size:10px; font-weight:900; }
     .app-title { margin-left:9px; font-size:12px; color:var(--text2); letter-spacing:.15px; }
-    .window-actions { margin-left:auto; display:flex; gap:4px; -webkit-app-region:no-drag; }
+    .window-actions { display:none; gap:4px; -webkit-app-region:no-drag; }
+    .platform-win32 .windows-actions, .platform-linux .windows-actions { display:flex; margin-left:auto; }
     .window-btn { width:30px; height:26px; border:0; border-radius:6px; background:transparent; color:var(--text2); font:14px/1 inherit; cursor:pointer; }
     .window-btn:hover { background:var(--surface); color:var(--text); }
     .window-btn.close:hover { background:var(--red); color:#fff; }
+    .platform-darwin .mac-actions { display:flex; order:-1; gap:8px; margin-right:12px; }
+    .mac-btn { width:12px; height:12px; padding:0; border:0; border-radius:50%; cursor:pointer; position:relative; }
+    .mac-btn.close { background:#ff5f57; }
+    .mac-btn.minimize { background:#febc2e; }
+    .mac-btn.maximize { background:#28c840; }
+    .mac-btn:hover { filter:brightness(.88); }
 
     /* ── Layout zones ── */
     .top-bar {
@@ -202,13 +210,18 @@
     .pad.is-dragging, .list-item.is-dragging { opacity:.25; }
 
     /* insertion line indicator */
-    .pad.insert-before::before, .list-item.insert-before::before,
-    .pad.insert-after::after,   .list-item.insert-after::after {
+    .list-item.insert-before::before, .list-item.insert-after::after {
       content:''; position:absolute; left:0; right:0; height:2px;
       background:var(--accent); border-radius:1px; z-index:20;
     }
-    .pad.insert-before::before, .list-item.insert-before::before { top:-3px; }
-    .pad.insert-after::after,   .list-item.insert-after::after   { bottom:-3px; }
+    .list-item.insert-before::before { top:-3px; }
+    .list-item.insert-after::after   { bottom:-3px; }
+    .pad.insert-before::before, .pad.insert-after::after {
+      content:''; position:absolute; top:0; bottom:0; width:2px;
+      background:var(--accent); border-radius:1px; z-index:20;
+    }
+    .pad.insert-before::before { left:-5px; }
+    .pad.insert-after::after   { right:-5px; }
 
     /* sort lock button */
     .view-btn.locked { color:var(--yellow); border-color:rgba(255,214,10,.35); }
@@ -489,8 +502,13 @@
 <body>
 
   <div class="app-titlebar" aria-label="視窗控制列">
+    <div class="window-actions mac-actions" aria-label="macOS 視窗控制">
+      <button class="mac-btn close" onclick="desktopWindow.close()" aria-label="關閉"></button>
+      <button class="mac-btn minimize" onclick="desktopWindow.minimize()" aria-label="最小化"></button>
+      <button class="mac-btn maximize" onclick="desktopWindow.maximize()" aria-label="放大或還原"></button>
+    </div>
     <div class="app-mark">▶</div><div class="app-title">OBS Timer Remote</div>
-    <div class="window-actions">
+    <div class="window-actions windows-actions" aria-label="Windows 視窗控制">
       <button class="window-btn" onclick="desktopWindow.minimize()" aria-label="最小化">−</button>
       <button class="window-btn" onclick="desktopWindow.maximize()" aria-label="放大或還原">□</button>
       <button class="window-btn close" onclick="desktopWindow.close()" aria-label="關閉">×</button>
@@ -1287,7 +1305,9 @@
       e.dataTransfer.dropEffect = 'move';
       if (i === dragSrcIdx) return;
       const rect = e.currentTarget.getBoundingClientRect();
-      const before = e.clientY < rect.top + rect.height / 2;
+      const before = viewMode === 'grid'
+        ? e.clientX < rect.left + rect.width / 2
+        : e.clientY < rect.top + rect.height / 2;
       clearDragClasses();
       document.querySelector('.is-dragging') || // keep ghost
       e.currentTarget.classList.add(before ? 'insert-before' : 'insert-after');
@@ -1345,17 +1365,29 @@
       renderPads();
     }
 
-    function navigateFocus(dir) {
+    function gridColumnCount() {
+      if (viewMode !== 'grid') return 1;
+      const template = getComputedStyle(document.getElementById('padGrid')).gridTemplateColumns;
+      return Math.max(1, template.split(/\s+/).filter(Boolean).length);
+    }
+
+    function navigateFocus(direction) {
       const visible = presets.reduce((acc, p, i) => { if (!p.hidden) acc.push(i); return acc; }, []);
       if (!visible.length) return;
+      const columns = gridColumnCount();
+      const step = direction === 'left' ? -1
+        : direction === 'right' ? 1
+        : direction === 'up' ? -columns
+        : columns;
       if (focusIdx < 0) {
-        // Start from the active (playing) preset if available, otherwise from first/last
-        const anchor = activeIdx >= 0 ? activeIdx : (dir > 0 ? visible[visible.length - 1] : visible[0]);
+        // Start from the active preset when possible; otherwise focus the first visible pad.
+        const anchor = activeIdx >= 0 ? activeIdx : visible[0];
         const pos = visible.indexOf(anchor);
-        focusIdx = pos < 0 ? visible[0] : visible[(pos + dir + visible.length) % visible.length];
+        focusIdx = pos < 0 ? visible[0] : visible[pos];
       } else {
         const pos = visible.indexOf(focusIdx);
-        focusIdx = pos < 0 ? visible[0] : visible[(pos + dir + visible.length) % visible.length];
+        const next = Math.max(0, Math.min((pos < 0 ? 0 : pos) + step, visible.length - 1));
+        focusIdx = visible[next];
       }
       renderPads();
       const el = document.querySelector('.kbd-focus');
@@ -1648,10 +1680,14 @@
             setTimeout(() => send({type:'pause'}), 80);
           }
           break;
-        case 'ArrowUp': case 'ArrowLeft':
-          e.preventDefault(); navigateFocus(-1); break;
-        case 'ArrowDown': case 'ArrowRight':
-          e.preventDefault(); navigateFocus(1); break;
+        case 'ArrowUp':
+          e.preventDefault(); navigateFocus('up'); break;
+        case 'ArrowDown':
+          e.preventDefault(); navigateFocus('down'); break;
+        case 'ArrowLeft':
+          e.preventDefault(); navigateFocus('left'); break;
+        case 'ArrowRight':
+          e.preventDefault(); navigateFocus('right'); break;
         case 'Delete':
           if (focusIdx >= 0) {
             presets[focusIdx].hidden = !presets[focusIdx].hidden;
@@ -1718,7 +1754,9 @@
     }
 
     // ── Init ──────────────────────────────────────────────
-    if (window.desktopWindow) document.documentElement.classList.add('desktop-app');
+    if (window.desktopWindow) {
+      document.documentElement.classList.add('desktop-app', `platform-${window.desktopWindow.platform}`);
+    }
     loadFromServer();
     connect();
   </script>
