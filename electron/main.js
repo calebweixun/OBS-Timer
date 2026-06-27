@@ -16,7 +16,7 @@ function createWindow() {
     title:     'OBS Timer Remote',
     frame:     isMac,
     titleBarStyle: isMac ? 'hiddenInset' : 'hidden',
-    ...(isMac ? { trafficLightPosition: { x: 14, y: 19 } } : {}),
+    ...(isMac ? { trafficLightPosition: { x: 14, y: 12 } } : {}),
     backgroundColor: '#0d0d0d',
     webPreferences: {
       nodeIntegration:  false,
