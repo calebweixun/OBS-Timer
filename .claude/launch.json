@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "OBS Timer",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["server.js"],
+      "port": 8080,
+      "autoPort": false
+    }
+  ]
+}
