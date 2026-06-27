@@ -46,19 +46,14 @@
       -webkit-app-region:drag; user-select:none;
     }
     .desktop-app .app-titlebar { display:flex; }
-    .app-mark { width:18px; height:18px; border-radius:5px; background:var(--green); color:#061006; display:grid; place-items:center; font-size:10px; font-weight:900; }
+    .app-mark { width:22px; height:22px; border-radius:6px; object-fit:cover; display:block; flex:0 0 22px; }
     .app-title { margin-left:9px; font-size:12px; color:var(--text2); letter-spacing:.15px; }
     .window-actions { display:none; gap:4px; -webkit-app-region:no-drag; }
     .platform-win32 .windows-actions, .platform-linux .windows-actions { display:flex; margin-left:auto; }
+    .platform-darwin .app-mark { margin-left:68px; }
     .window-btn { width:30px; height:26px; border:0; border-radius:6px; background:transparent; color:var(--text2); font:14px/1 inherit; cursor:pointer; }
     .window-btn:hover { background:var(--surface); color:var(--text); }
     .window-btn.close:hover { background:var(--red); color:#fff; }
-    .platform-darwin .mac-actions { display:flex; order:-1; gap:8px; margin-right:12px; }
-    .mac-btn { width:12px; height:12px; padding:0; border:0; border-radius:50%; cursor:pointer; position:relative; }
-    .mac-btn.close { background:#ff5f57; }
-    .mac-btn.minimize { background:#febc2e; }
-    .mac-btn.maximize { background:#28c840; }
-    .mac-btn:hover { filter:brightness(.88); }
 
     /* ── Layout zones ── */
     .top-bar {
@@ -502,12 +497,7 @@
 <body>
 
   <div class="app-titlebar" aria-label="視窗控制列">
-    <div class="window-actions mac-actions" aria-label="macOS 視窗控制">
-      <button class="mac-btn close" onclick="desktopWindow.close()" aria-label="關閉"></button>
-      <button class="mac-btn minimize" onclick="desktopWindow.minimize()" aria-label="最小化"></button>
-      <button class="mac-btn maximize" onclick="desktopWindow.maximize()" aria-label="放大或還原"></button>
-    </div>
-    <div class="app-mark">▶</div><div class="app-title">OBS Timer Remote</div>
+    <img class="app-mark" src="/build/icon.png" alt=""><div class="app-title">OBS Timer Remote</div>
     <div class="window-actions windows-actions" aria-label="Windows 視窗控制">
       <button class="window-btn" onclick="desktopWindow.minimize()" aria-label="最小化">−</button>
       <button class="window-btn" onclick="desktopWindow.maximize()" aria-label="放大或還原">□</button>

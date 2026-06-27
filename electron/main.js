@@ -7,14 +7,16 @@ const ROOT = path.join(__dirname, '..');
 let win = null;
 
 function createWindow() {
+  const isMac = process.platform === 'darwin';
   win = new BrowserWindow({
     width:     1080,
     height:    780,
     minWidth:  800,
     minHeight: 600,
     title:     'OBS Timer Remote',
-    frame:     false,
-    titleBarStyle: 'hidden',
+    frame:     isMac,
+    titleBarStyle: isMac ? 'hiddenInset' : 'hidden',
+    ...(isMac ? { trafficLightPosition: { x: 14, y: 19 } } : {}),
     backgroundColor: '#0d0d0d',
     webPreferences: {
       nodeIntegration:  false,
