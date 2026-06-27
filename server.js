@@ -1,9 +1,11 @@
 const http = require('http');
 const fs   = require('fs');
 const path = require('path');
+const os   = require('os');
 
 let ROOT = __dirname;
-const settingsPath = () => path.join(ROOT, 'settings.json');
+let DATA_DIR = __dirname;
+const settingsPath = () => path.join(DATA_DIR, 'settings.json');
 
 // ── Default global config ───────────────────────────────────
 const DEFAULT_GLOBAL = {
@@ -13,7 +15,7 @@ const DEFAULT_GLOBAL = {
 };
 
 // ── Settings (presets + global — persisted to settings.json) ─
-let savedSettings = { presets: [], global: JSON.parse(JSON.stringify(DEFAULT_GLOBAL)) };
+let savedSettings = { presets: [], global: JSON.parse(JSON.stringify(DEFAULT_GLOBAL)), app: { port: 8080 } };
 
 function loadSettings() {
   try {
@@ -21,6 +23,7 @@ function loadSettings() {
     const parsed = JSON.parse(raw);
     if (parsed.presets) savedSettings.presets = parsed.presets;
     if (parsed.global)  savedSettings.global  = { ...JSON.parse(JSON.stringify(DEFAULT_GLOBAL)), ...parsed.global };
+    if (parsed.app)     savedSettings.app     = { ...savedSettings.app, ...parsed.app };
   } catch {}
 }
 
@@ -38,7 +41,7 @@ const state = {
   flash:      { active: false, fg: '#ffffff', bg: '#ff0000', interval: 500 },
   flashOnEnd: true,
   border:     { visible: false, color: '#ffffff', width: 3, radius: 24, style: 'solid', inset: 30, flash: false, flashColor: '#ff0000' },
-  overlay:    { text: '', active: false },
+  overlay:    { text: '', active: false, seq: 0 },
   global:     JSON.parse(JSON.stringify(DEFAULT_GLOBAL)),
 };
 
@@ -163,6 +166,7 @@ function handle(cmd) {
     case 'overlay':
       state.overlay.text   = cmd.text || '';
       state.overlay.active = !!state.overlay.text;
+      state.overlay.seq    = (state.overlay.seq + 1) % 1000;
       break;
 
     case 'clearOverlay':
@@ -172,10 +176,21 @@ function handle(cmd) {
 
     // ── Global style/flash/border ──────────────────────────
     case 'global':
-      if (cmd.style)  Object.assign(state.global.style,  cmd.style);
-      if (cmd.flash)  Object.assign(state.global.flash,  cmd.flash);
-      if (cmd.border) Object.assign(state.global.border, cmd.border);
-      // Sync to savedSettings and persist
+      if (cmd.style) {
+        Object.assign(state.global.style, cmd.style);
+        Object.assign(state.style, cmd.style);
+      }
+      if (cmd.flash) {
+        Object.assign(state.global.flash, cmd.flash);
+        if (cmd.flash.fg       !== undefined) state.flash.fg       = cmd.flash.fg;
+        if (cmd.flash.bg       !== undefined) state.flash.bg       = cmd.flash.bg;
+        if (cmd.flash.interval !== undefined) state.flash.interval = Number(cmd.flash.interval);
+        if (cmd.flash.flashOnEnd !== undefined) state.flashOnEnd   = !!cmd.flash.flashOnEnd;
+      }
+      if (cmd.border) {
+        Object.assign(state.global.border, cmd.border);
+        Object.assign(state.border, cmd.border);
+      }
       savedSettings.global = JSON.parse(JSON.stringify(state.global));
       writeSettings();
       break;
@@ -220,6 +235,15 @@ const server = http.createServer((req, res) => {
   }
 
   // Settings persistence API
+  if (pathname === '/api/info' && req.method === 'GET') {
+    const addresses = Object.values(os.networkInterfaces()).flat()
+      .filter(item => item && item.family === 'IPv4' && !item.internal)
+      .map(item => item.address);
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ port: savedSettings.app.port, addresses }));
+    return;
+  }
+
   if (pathname === '/api/settings') {
     if (req.method === 'GET') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -233,6 +257,15 @@ const server = http.createServer((req, res) => {
         try {
           const data = JSON.parse(body);
           if (Array.isArray(data.presets)) savedSettings.presets = data.presets;
+          if (data.app) {
+            const port = Number(data.app.port);
+            if (!Number.isInteger(port) || port < 1024 || port > 65535) {
+              res.writeHead(400, { 'Content-Type': 'application/json' });
+              res.end('{"ok":false,"error":"Port must be between 1024 and 65535"}');
+              return;
+            }
+            savedSettings.app = { ...savedSettings.app, port };
+          }
           if (data.global) {
             savedSettings.global = data.global;
             // Also update live state so new clients get current global
@@ -261,11 +294,21 @@ const server = http.createServer((req, res) => {
   });
 });
 
-function start(port, root) {
+function start(port, root, options = {}) {
   if (root) ROOT = root;
-  return new Promise((resolve) => {
-    server.listen(port, '127.0.0.1', () => {
+  if (options.dataDir) DATA_DIR = options.dataDir;
+  loadSettings();
+  Object.assign(state.global.style,  savedSettings.global.style  || {});
+  Object.assign(state.global.flash,  savedSettings.global.flash  || {});
+  Object.assign(state.global.border, savedSettings.global.border || {});
+  savedSettings.app.port = port;
+  writeSettings();
+  return new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(port, '0.0.0.0', () => {
+      server.removeListener('error', reject);
       console.log(`\nOBS Timer  http://localhost:${port}`);
+      console.log(`  listening   →  0.0.0.0:${port}`);
       console.log(`  remote     →  http://localhost:${port}/remote.html`);
       console.log(`  playclock  →  http://localhost:${port}/playclock.html\n`);
       resolve(port);

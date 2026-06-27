@@ -4,6 +4,8 @@
   <title>OBS Timer Remote</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg:      #0d0d0d;
@@ -27,10 +29,68 @@
       background: var(--bg);
       color: var(--text);
       font-family: -apple-system,'SF Pro Display','Helvetica Neue',sans-serif;
-      min-height: 100vh;
-      padding: 20px 20px 48px;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      padding: 0;
       max-width: 920px;
       margin: 0 auto;
+    }
+
+    /* Desktop-only frameless window chrome (Spotify-inspired) */
+    .app-titlebar {
+      display:none; height:38px; flex:0 0 38px; align-items:center;
+      padding:0 12px; background:#080808; border-bottom:1px solid var(--border);
+      -webkit-app-region:drag; user-select:none;
+    }
+    .desktop-app .app-titlebar { display:flex; }
+    .app-mark { width:18px; height:18px; border-radius:5px; background:var(--green); color:#061006; display:grid; place-items:center; font-size:10px; font-weight:900; }
+    .app-title { margin-left:9px; font-size:12px; color:var(--text2); letter-spacing:.15px; }
+    .window-actions { margin-left:auto; display:flex; gap:4px; -webkit-app-region:no-drag; }
+    .window-btn { width:30px; height:26px; border:0; border-radius:6px; background:transparent; color:var(--text2); font:14px/1 inherit; cursor:pointer; }
+    .window-btn:hover { background:var(--surface); color:var(--text); }
+    .window-btn.close:hover { background:var(--red); color:#fff; }
+
+    /* ── Layout zones ── */
+    .top-bar {
+      flex-shrink: 0;
+      padding: 20px 20px 0;
+      position: relative;
+      z-index: 10;
+      background: var(--bg);
+    }
+    .top-bar::after {
+      content: '';
+      position: absolute;
+      left: 0; right: 0; bottom: -20px;
+      height: 20px;
+      background: linear-gradient(to bottom, var(--bg), transparent);
+      pointer-events: none;
+    }
+    .scroll-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 20px 8px;
+      z-index: 1;
+    }
+    .scroll-area::-webkit-scrollbar { width: 4px; }
+    .scroll-area::-webkit-scrollbar-track { background: transparent; }
+    .scroll-area::-webkit-scrollbar-thumb { background: var(--surf2); border-radius: 2px; }
+    .bottom-bar {
+      flex-shrink: 0;
+      padding: 12px 20px 20px;
+      position: relative;
+      z-index: 10;
+      background: var(--bg);
+    }
+    .bottom-bar::before {
+      content: '';
+      position: absolute;
+      left: 0; right: 0; top: -20px;
+      height: 20px;
+      background: linear-gradient(to top, var(--bg), transparent);
+      pointer-events: none;
     }
 
     /* ── Header ── */
@@ -62,7 +122,7 @@
     /* ── Now Playing ── */
     .now {
       background:var(--card); border:1px solid var(--border);
-      border-radius:var(--r); padding:18px 22px 14px; margin-bottom:24px;
+      border-radius:var(--r); padding:18px 22px 14px; margin-bottom:16px;
     }
     .now-top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; }
     .now-time {
@@ -92,14 +152,22 @@
     /* dimmed = greyed-out when using global settings */
     .dimmed { opacity:.3; pointer-events:none; user-select:none; transition:opacity .2s; }
 
-    /* ── Pads ── */
+    /* ── View toggle ── */
+    .view-btn {
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:8px; padding:5px 10px; font-size:11px; color:var(--text2);
+      cursor:pointer; font-family:inherit; transition:background .1s;
+    }
+    .view-btn:hover { background:var(--surf2); color:var(--text); }
+
+    /* ── Pads (grid) ── */
     .pad-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:8px; }
     .pad {
       background:var(--card); border:1px solid var(--border); border-radius:var(--r);
       padding:14px 14px 12px; cursor:pointer; user-select:none;
       position:relative; min-height:88px;
       display:flex; flex-direction:column; justify-content:space-between;
-      transition:background .08s, border-color .08s, transform .08s;
+      transition:background .08s, border-color .08s, transform .08s, opacity .2s;
     }
     .pad:hover { background:var(--surface); }
     .pad:active { transform:scale(.95); }
@@ -122,6 +190,107 @@
       opacity:.45; transition:opacity .15s, border-color .15s;
     }
     .pad-add:hover { opacity:.9; border-color:var(--text3); background:none; }
+
+    /* hidden pad (grid) */
+    .pad.pad-hidden { opacity:.3; cursor:default; }
+    .pad.pad-hidden:hover { background:var(--card); transform:none; }
+    .pad.pad-hidden .pad-edit-btn { display:none; }
+
+    /* drag-and-drop */
+    .pad[draggable="true"]:not(.pad-hidden) { cursor:grab; }
+    .list-item[draggable="true"]:not(.pad-hidden) { cursor:grab; }
+    .pad.is-dragging, .list-item.is-dragging { opacity:.25; }
+
+    /* insertion line indicator */
+    .pad.insert-before::before, .list-item.insert-before::before,
+    .pad.insert-after::after,   .list-item.insert-after::after {
+      content:''; position:absolute; left:0; right:0; height:2px;
+      background:var(--accent); border-radius:1px; z-index:20;
+    }
+    .pad.insert-before::before, .list-item.insert-before::before { top:-3px; }
+    .pad.insert-after::after,   .list-item.insert-after::after   { bottom:-3px; }
+
+    /* sort lock button */
+    .view-btn.locked { color:var(--yellow); border-color:rgba(255,214,10,.35); }
+    .view-btn.red { color:var(--red); border-color:rgba(255,59,48,.28); }
+    .view-btn.red:hover { background:rgba(255,59,48,.1); color:var(--red); }
+    .vdiv { width:1px; height:16px; background:var(--border); margin:0 2px; align-self:center; }
+
+    /* keyboard focus preview */
+    .pad.kbd-focus { box-shadow:0 0 0 2px var(--green) !important; border-color:var(--green) !important; }
+    .list-item.kbd-focus { box-shadow:0 0 0 2px var(--green) !important; border-color:var(--green) !important; }
+
+    /* kbd shortcuts modal */
+    kbd {
+      display:inline-block; background:var(--surface); border:1px solid rgba(255,255,255,.18);
+      border-radius:5px; padding:2px 7px; font-size:11px; font-family:ui-monospace,monospace;
+      color:var(--text); white-space:nowrap; box-shadow:0 1px 2px rgba(0,0,0,.35); margin:1px;
+    }
+    .shortcuts-table { width:100%; border-collapse:collapse; }
+    .shortcuts-table td { padding:8px 4px; font-size:13px; color:var(--text2); border-bottom:1px solid rgba(255,255,255,.05); vertical-align:middle; }
+    .shortcuts-table tr:last-child td { border-bottom:none; }
+    .shortcuts-table td:first-child { width:170px; }
+
+    /* ── Pads (list) ── */
+    .pad-list { display:flex; flex-direction:column; gap:4px; }
+    .list-item {
+      display:flex; align-items:center; gap:12px;
+      padding:10px 14px; border-radius:var(--r);
+      background:var(--card); border:1px solid var(--border);
+      cursor:pointer; user-select:none; position:relative;
+      transition:background .08s, opacity .2s;
+    }
+    .list-item:hover { background:var(--surface); }
+    .list-item.running { background:var(--green); border-color:var(--green); }
+    .list-item.running .list-time, .list-item.running .list-name { color:#000; }
+    .list-item.paused-pad { background:#2a2400; border-color:var(--yellow); }
+    .list-item.paused-pad .list-time { color:var(--yellow); }
+    .list-item.pad-hidden { opacity:.3; cursor:default; }
+    .list-item.pad-hidden:hover { background:var(--card); }
+    .list-time {
+      font-size:20px; font-weight:600; font-variant-numeric:tabular-nums;
+      color:var(--text); min-width:52px; flex-shrink:0; letter-spacing:-0.5px;
+    }
+    .list-info { flex:1; min-width:0; overflow:hidden; }
+    .list-name { font-size:13px; color:var(--text2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .list-subtitle { font-size:11px; color:var(--text3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:1px; }
+    .list-global-badge { font-size:9px; color:var(--accent); flex-shrink:0; }
+    .list-actions { display:flex; gap:2px; flex-shrink:0; }
+    .list-act-btn {
+      background:none; border:none; cursor:pointer; color:var(--text2);
+      font-size:13px; padding:6px 8px; border-radius:6px; transition:background .1s, color .1s;
+      font-family:inherit;
+    }
+    .list-act-btn:hover { background:var(--surface); color:var(--text); }
+    .running .list-act-btn, .running .list-act-btn:hover { color:#000; background:rgba(0,0,0,.08); }
+    .list-add {
+      display:flex; align-items:center; justify-content:center; gap:6px;
+      padding:10px; border:1px dashed var(--surf2); border-radius:var(--r);
+      cursor:pointer; color:var(--text3); font-size:13px;
+      opacity:.45; transition:opacity .15s, border-color .15s;
+    }
+    .list-add:hover { opacity:.9; border-color:var(--text3); }
+
+    /* ── Context menu ── */
+    #ctxMenu {
+      position:fixed; z-index:9999;
+      background:var(--card); border:1px solid rgba(255,255,255,.13);
+      border-radius:11px; padding:4px; min-width:136px;
+      box-shadow:0 8px 32px rgba(0,0,0,.55), 0 2px 8px rgba(0,0,0,.3);
+      display:none; user-select:none;
+    }
+    .ctx-item {
+      display:flex; align-items:center; gap:9px;
+      width:100%; padding:9px 12px; border-radius:7px;
+      background:none; border:none; color:var(--text); font-family:inherit;
+      font-size:13px; cursor:pointer; text-align:left; line-height:1;
+      transition:background .08s;
+    }
+    .ctx-item:hover { background:var(--surface); }
+    .ctx-item .ctx-ico { font-size:14px; width:16px; text-align:center; flex-shrink:0; }
+    .ctx-sep { height:1px; background:rgba(255,255,255,.07); margin:3px 0; }
+    .ctx-item.danger { color:var(--red); }
+    .ctx-item.danger:hover { background:#ff3b3014; }
 
     /* ── Transport ── */
     .transport { display:flex; gap:8px; align-items:stretch; }
@@ -160,11 +329,11 @@
     .txt-send:active { transform:scale(.95); }
     .txt-clear {
       background:none; border:1px solid var(--border);
-      border-radius:var(--rs); padding:10px 14px; color:var(--text3);
+      border-radius:var(--rs); padding:10px 14px; color:var(--text2);
       font-size:13px; font-family:inherit; cursor:pointer;
       transition:background .1s, color .1s; white-space:nowrap;
     }
-    .txt-clear:hover { background:var(--surface); color:var(--text2); }
+    .txt-clear:hover { background:var(--surface); color:var(--text); }
 
     /* ── Help panel ── */
     .help-overlay {
@@ -319,6 +488,16 @@
 </head>
 <body>
 
+  <div class="app-titlebar" aria-label="視窗控制列">
+    <div class="app-mark">▶</div><div class="app-title">OBS Timer Remote</div>
+    <div class="window-actions">
+      <button class="window-btn" onclick="desktopWindow.minimize()" aria-label="最小化">−</button>
+      <button class="window-btn" onclick="desktopWindow.maximize()" aria-label="放大或還原">□</button>
+      <button class="window-btn close" onclick="desktopWindow.close()" aria-label="關閉">×</button>
+    </div>
+  </div>
+
+  <div class="top-bar">
   <!-- Header -->
   <div class="hdr">
     <div class="hdr-left">
@@ -329,10 +508,13 @@
         <span>Based on <a href="https://github.com/feather0611/OBS-Timer" target="_blank" rel="noopener">feather0611/OBS-Timer</a></span>
       </div>
     </div>
-    <button class="help-btn" id="helpBtn" onclick="openHelp()">
-      <div class="dot" id="dot"></div>
-      <span id="connTxt">連線中…</span>
-    </button>
+    <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
+      <button class="help-btn" onclick="openShortcutsModal()" title="鍵盤快速鍵" style="padding:6px 10px;font-size:14px">⌨</button>
+      <button class="help-btn" id="helpBtn" onclick="openHelp()">
+        <div class="dot" id="dot"></div>
+        <span id="connTxt">連線中…</span>
+      </button>
+    </div>
   </div>
 
   <!-- Now Playing -->
@@ -347,18 +529,32 @@
     <div class="prog"><div class="prog-fill" id="progFill"></div></div>
     <div class="paused-hint" id="pausedHint">⏸ 已暫停</div>
   </div>
+  </div><!-- /.top-bar -->
 
+  <div class="scroll-area">
   <!-- Presets -->
-  <div class="sec">
+  <div class="sec" style="margin-bottom:0">
     <div class="sec-hdr">
       <div class="sec-lbl">倒數預設</div>
-      <button class="global-btn" onclick="openGlobalModal()">⚙ 全域設定</button>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button class="view-btn" id="sortLockBtn" onclick="toggleSortLock()">🔓 排序</button>
+        <button class="view-btn" id="viewToggleBtn" onclick="toggleView()">⊞ 卡片</button>
+        <div class="vdiv"></div>
+        <button class="view-btn" onclick="exportPresets()" title="匯出預設清單">↓ 匯出</button>
+        <button class="view-btn" onclick="document.getElementById('importFileInput').click()" title="從檔案匯入">↑ 匯入</button>
+        <button class="view-btn red" onclick="openClearModal()" title="清除所有預設">⌫ 清除</button>
+        <input type="file" id="importFileInput" accept=".json" style="display:none" onchange="handleImportFile(event)">
+        <div class="vdiv"></div>
+        <button class="global-btn" onclick="openGlobalModal()">⚙ 全域設定</button>
+      </div>
     </div>
     <div class="pad-grid" id="padGrid"></div>
   </div>
+  </div><!-- /.scroll-area -->
 
+  <div class="bottom-bar">
   <!-- Transport -->
-  <div class="sec">
+  <div class="sec" style="margin-bottom:0">
     <div class="sec-lbl">控制</div>
     <div class="transport">
       <button class="tbn" onclick="send({type:'resume'})"><span class="ico">▶</span>繼續</button>
@@ -370,10 +566,11 @@
     </div>
     <div class="txt-bar">
       <input class="txt-in" id="txtIn" placeholder="疊加文字（顯示在時鐘上方並閃爍）…">
-      <button class="txt-send" onclick="sendTxt()">疊字</button>
+      <button class="txt-send" onclick="sendTxt()">送出</button>
       <button class="txt-clear" onclick="clearOverlay()">清除</button>
     </div>
   </div>
+  </div><!-- /.bottom-bar -->
 
   <!-- ── OBS Help Panel ── -->
   <div class="help-overlay" id="helpOverlay" onclick="outsideHelp(event)">
@@ -429,9 +626,12 @@
 
       <div class="help-section">
         <h3>更換 Port</h3>
-        <p class="help-note">啟動時帶入 port 參數：</p>
-        <div class="help-url" style="font-family:monospace;">./start.sh 9191</div>
-        <p class="help-note" style="margin-top:6px">或設定環境變數 <code style="color:var(--accent)">PORT=9191 node server.js</code></p>
+        <p class="help-note">若 8080 已被占用，可設定 1024–65535。設定會永久保存，重新啟動 App 後生效。</p>
+        <div class="help-url" style="margin-top:9px;gap:8px">
+          <input id="appPort" type="number" min="1024" max="65535" value="8080" style="min-width:0;flex:1;background:transparent;border:0;color:var(--text);font:13px ui-monospace,monospace;outline:none">
+          <button class="copy-btn" onclick="savePort()">儲存</button>
+        </div>
+        <p class="help-note" id="portStatus" style="margin-top:7px"></p>
       </div>
     </div>
   </div>
@@ -457,16 +657,21 @@
           </div>
           <div class="fld" style="flex:3"></div>
         </div>
-        <div class="fld">
+        <div class="fld" style="flex:1">
           <div class="fld-lbl">字體</div>
           <select class="min" id="gFont">
-            <option value="ui-monospace,'SF Mono','Courier New',monospace">SF Mono（等寬）</option>
-            <option value="-apple-system,'SF Pro Display','Helvetica Neue',sans-serif">SF Pro（無襯線）</option>
+            <option value="ui-monospace,'SF Mono','Courier New',monospace">SF Mono</option>
+            <option value="'Roboto Mono',ui-monospace,monospace">Roboto Mono</option>
+            <option value="-apple-system,'SF Pro Display','Helvetica Neue',sans-serif">SF Pro</option>
             <option value="'Helvetica Neue',Arial,sans-serif">Helvetica Neue</option>
-            <option value="Georgia,'Times New Roman',serif">Georgia（襯線）</option>
-            <option value="Impact,'Arial Black',sans-serif">Impact（粗體）</option>
+            <option value="Georgia,'Times New Roman',serif">Georgia</option>
+            <option value="Impact,'Arial Black',sans-serif">Impact</option>
             <option value="'Courier New',Courier,monospace">Courier New</option>
           </select>
+        </div>
+        <div class="fld-toggle" style="align-self:flex-end;padding-bottom:2px">
+          <button class="tog" id="gBold" onclick="toggleEl('gBold')"></button>
+          <span class="tog-lbl">粗體</span>
         </div>
       </div>
 
@@ -570,8 +775,11 @@
           <input class="min" id="eLabel" placeholder="顯示在遙控按鈕上">
         </div>
         <div class="fld">
-          <div class="fld-lbl">畫面標題</div>
-          <input class="min" id="eTitle" placeholder="顯示在倒數上方（留空不顯示）">
+          <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:6px">
+            <div class="fld-lbl" style="margin-bottom:0">畫面標題</div>
+            <span style="font-size:10px;color:var(--text3)">Shift + Enter 換行　· Enter 儲存　· Esc 關閉</span>
+          </div>
+          <textarea class="min" id="eTitle" placeholder="顯示在倒數上方（留空不顯示）" rows="2" style="resize:vertical;line-height:1.4"></textarea>
         </div>
         <div class="fld-row">
           <div class="fld">
@@ -610,16 +818,21 @@
           </div>
           <div class="fld" style="flex:3"></div>
         </div>
-        <div class="fld">
+        <div class="fld" style="flex:1">
           <div class="fld-lbl">字體</div>
           <select class="min" id="eFont">
-            <option value="ui-monospace,'SF Mono','Courier New',monospace">SF Mono（等寬）</option>
-            <option value="-apple-system,'SF Pro Display','Helvetica Neue',sans-serif">SF Pro（無襯線）</option>
+            <option value="ui-monospace,'SF Mono','Courier New',monospace">SF Mono</option>
+            <option value="'Roboto Mono',ui-monospace,monospace">Roboto Mono</option>
+            <option value="-apple-system,'SF Pro Display','Helvetica Neue',sans-serif">SF Pro</option>
             <option value="'Helvetica Neue',Arial,sans-serif">Helvetica Neue</option>
-            <option value="Georgia,'Times New Roman',serif">Georgia（襯線）</option>
-            <option value="Impact,'Arial Black',sans-serif">Impact（粗體）</option>
+            <option value="Georgia,'Times New Roman',serif">Georgia</option>
+            <option value="Impact,'Arial Black',sans-serif">Impact</option>
             <option value="'Courier New',Courier,monospace">Courier New</option>
           </select>
+        </div>
+        <div class="fld-toggle" style="align-self:flex-end;padding-bottom:2px">
+          <button class="tog" id="eBold" onclick="toggleEl('eBold')"></button>
+          <span class="tog-lbl">粗體</span>
         </div>
       </div>
 
@@ -711,6 +924,82 @@
     </div>
   </div>
 
+  <!-- ── Shortcuts Modal ── -->
+  <div class="overlay" id="shortcutsOverlay">
+    <div class="modal" style="max-width:520px">
+      <div class="modal-hdr">
+        <h2>鍵盤快速鍵</h2>
+        <button class="modal-close" onclick="closeShortcutsModal()">×</button>
+      </div>
+      <div class="msec">
+        <div class="msec-lbl">計時控制</div>
+        <table class="shortcuts-table">
+          <tr><td><kbd>Space</kbd></td><td>暫停 / 繼續；有預覽選取時送出該預設</td></tr>
+          <tr><td><kbd>Backspace</kbd></td><td>重置計時器並停在起始點</td></tr>
+          <tr><td><kbd>Esc</kbd></td><td>切換成時鐘模式；已是時鐘時隱藏畫面</td></tr>
+        </table>
+      </div>
+      <div class="msec">
+        <div class="msec-lbl">預設導覽</div>
+        <table class="shortcuts-table">
+          <tr><td><kbd>↑</kbd> / <kbd>←</kbd></td><td>選取上一個預設（綠框預覽，不送出）</td></tr>
+          <tr><td><kbd>↓</kbd> / <kbd>→</kbd></td><td>選取下一個預設</td></tr>
+          <tr><td><kbd>Space</kbd></td><td>送出目前選取的預設</td></tr>
+          <tr><td><kbd>Del</kbd></td><td>切換選取預設的隱藏狀態</td></tr>
+          <tr><td><kbd>Ctrl</kbd> + <kbd>D</kbd></td><td>複製選取的預設（插入在其後）</td></tr>
+        </table>
+      </div>
+      <div class="modal-foot">
+        <button class="mbtn cancel" style="flex:0;padding:11px 28px" onclick="closeShortcutsModal()">關閉</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Import Modal ── -->
+  <div class="overlay" id="importOverlay">
+    <div class="modal" style="max-width:420px">
+      <div class="modal-hdr">
+        <h2>匯入預設</h2>
+        <button class="modal-close" onclick="closeImportModal()">×</button>
+      </div>
+      <div class="msec">
+        <p id="importInfo" style="font-size:14px;color:var(--text2);line-height:1.7"></p>
+      </div>
+      <div class="modal-foot">
+        <button class="mbtn cancel" onclick="closeImportModal()">取消</button>
+        <button class="mbtn cancel" onclick="doImport('merge')" style="flex:1.2">合併追加</button>
+        <button class="mbtn confirm" onclick="doImport('overwrite')">覆蓋所有</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Clear Modal ── -->
+  <div class="overlay" id="clearOverlay">
+    <div class="modal" style="max-width:360px">
+      <div class="modal-hdr">
+        <h2>清除所有預設</h2>
+        <button class="modal-close" onclick="closeClearModal()">×</button>
+      </div>
+      <div class="msec">
+        <p style="font-size:14px;color:var(--text2);line-height:1.7">確定要刪除全部預設嗎？此操作無法復原。<br>建議先匯出備份。</p>
+      </div>
+      <div class="modal-foot">
+        <button class="mbtn cancel" onclick="closeClearModal()">取消</button>
+        <button class="mbtn del" style="flex:1" onclick="doClearPresets()">確定清除</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Context menu -->
+  <div id="ctxMenu">
+    <button class="ctx-item" onclick="ctxDo('edit')"><span class="ctx-ico">✎</span>編輯</button>
+    <button class="ctx-item" onclick="ctxDo('trigger')"><span class="ctx-ico">▶</span>送出</button>
+    <button class="ctx-item" onclick="ctxDo('duplicate')"><span class="ctx-ico">⧉</span>複製</button>
+    <button class="ctx-item" id="ctxHideBtn" onclick="ctxDo('toggleHide')"><span class="ctx-ico">◌</span>隱藏</button>
+    <div class="ctx-sep"></div>
+    <button class="ctx-item danger" onclick="ctxDo('delete')"><span class="ctx-ico">✕</span>刪除</button>
+  </div>
+
   <script>
     // ── Helpers ───────────────────────────────────────────
     function pad(n) { return n < 10 ? '0' + n : '' + n; }
@@ -725,11 +1014,18 @@
     }
 
     // ── Help panel ────────────────────────────────────────
-    function openHelp() {
+    async function openHelp() {
       const port = window.location.port || '8080';
       const host = window.location.hostname;
       document.getElementById('playclockUrl').textContent = `http://${host}:${port}/playclock.html`;
-      document.getElementById('remoteUrl').textContent    = `http://${host}:${port}/remote.html`;
+      let remoteHost = host;
+      try {
+        const info = await fetch('/api/info').then(resp => resp.json());
+        if (info.addresses && info.addresses.length) remoteHost = info.addresses[0];
+      } catch {}
+      document.getElementById('remoteUrl').textContent    = `http://${remoteHost}:${port}/remote.html`;
+      document.getElementById('appPort').value = appSettings.port || Number(port);
+      document.getElementById('portStatus').textContent = '';
       document.getElementById('helpOverlay').classList.add('open');
     }
     function closeHelp() { document.getElementById('helpOverlay').classList.remove('open'); }
@@ -755,17 +1051,56 @@
     }
 
     // ── Global settings ───────────────────────────────────
-    let globalSettings = {
-      style:  { fg:'#ffffff', bg:'transparent', font:"ui-monospace,'SF Mono','Courier New',monospace" },
+    const GLOBAL_DEFAULTS = {
+      style:  { fg:'#ffffff', bg:'transparent', font:"ui-monospace,'SF Mono','Courier New',monospace", bold:false },
       flash:  { fg:'#ffffff', bg:'#ff0000', interval:500, flashOnEnd:true },
       border: { visible:false, color:'#ffffff', width:3, radius:24, style:'solid', inset:30, flash:false, flashColor:'#ff0000' },
     };
+    let appSettings = { port: Number(window.location.port) || 8080 };
+
+    async function savePort() {
+      const input = document.getElementById('appPort');
+      const status = document.getElementById('portStatus');
+      const port = Number(input.value);
+      if (!Number.isInteger(port) || port < 1024 || port > 65535) {
+        status.textContent = '請輸入 1024–65535 之間的 Port。';
+        status.style.color = 'var(--red)';
+        return;
+      }
+      try {
+        const resp = await fetch('/api/settings', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({ app:{ port } }),
+        });
+        if (!resp.ok) throw new Error('save failed');
+        appSettings.port = port;
+        status.textContent = port === Number(window.location.port) ? '已儲存。' : `已儲存，請重新啟動 App；新網址將使用 Port ${port}。`;
+        status.style.color = 'var(--green)';
+      } catch {
+        status.textContent = '儲存失敗，請稍後再試。';
+        status.style.color = 'var(--red)';
+      }
+    }
+
+    function loadGlobalFromStorage() {
+      try {
+        const raw = localStorage.getItem('obsGlobalSettings');
+        if (raw) return JSON.parse(raw);
+      } catch {}
+      return null;
+    }
+    function saveGlobalToStorage(g) {
+      try { localStorage.setItem('obsGlobalSettings', JSON.stringify(g)); } catch {}
+    }
+
+    let globalSettings = loadGlobalFromStorage() || JSON.parse(JSON.stringify(GLOBAL_DEFAULTS));
 
     function openGlobalModal() {
       const g = globalSettings;
       document.getElementById('gFg').value            = g.style.fg;
       document.getElementById('gBg').value            = g.style.bg === 'transparent' ? '#000000' : g.style.bg;
       document.getElementById('gFont').value          = g.style.font;
+      setTog('gBold', g.style.bold || false);
       setTog('gFlashEnd', g.flash.flashOnEnd);
       document.getElementById('gFlashFg').value       = g.flash.fg;
       document.getElementById('gFlashBg').value       = g.flash.bg;
@@ -807,9 +1142,8 @@
           flashColor: document.getElementById('gBorderFlashColor').value,
         },
       };
-      // Broadcast to all clients so playclock knows the new global
+      saveGlobalToStorage(globalSettings);
       send({ type:'global', ...globalSettings });
-      // Persist settings (presets + global)
       saveToServer();
       closeGlobalModal();
     }
@@ -819,7 +1153,8 @@
       return {
         label, title: label, seconds,
         useGlobal: false,
-        style:  { fg:'#ffffff', bg:'transparent', font:"ui-monospace,'SF Mono','Courier New',monospace" },
+        hidden: false,
+        style:  { fg:'#ffffff', bg:'transparent', font:"ui-monospace,'SF Mono','Courier New',monospace", bold:false },
         flash:  { fg:'#ffffff', bg:'#ff0000', interval:500, flashOnEnd:true },
         border: { visible:false, color:'#ffffff', width:3, radius:24, style:'solid', inset:30, flash:false, flashColor:'#ff0000' },
       };
@@ -837,7 +1172,11 @@
         const data = await resp.json();
         if (data.presets && data.presets.length > 0) presets = data.presets;
         else presets = DEFAULTS;
-        if (data.global) globalSettings = { ...globalSettings, ...data.global };
+        if (data.global) {
+          globalSettings = { ...JSON.parse(JSON.stringify(GLOBAL_DEFAULTS)), ...data.global };
+          saveGlobalToStorage(globalSettings); // keep localStorage in sync with server
+        }
+        if (data.app) appSettings = { ...appSettings, ...data.app };
       } catch {
         presets = DEFAULTS;
       }
@@ -852,31 +1191,297 @@
       }).catch(() => {});
     }
 
+    // ── Export / Import / Clear ───────────────────────────
+    function exportPresets() {
+      const data = JSON.stringify({ version: 1, presets }, null, 2);
+      const blob = new Blob([data], { type: 'application/json' });
+      const url  = URL.createObjectURL(blob);
+      const a    = Object.assign(document.createElement('a'), {
+        href: url,
+        download: `obs-timer-presets-${new Date().toISOString().slice(0,10)}.json`,
+      });
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    let importBuffer = [];
+
+    function handleImportFile(e) {
+      const file = e.target.files[0];
+      e.target.value = '';
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        try {
+          const parsed = JSON.parse(ev.target.result);
+          importBuffer = Array.isArray(parsed) ? parsed
+            : Array.isArray(parsed.presets) ? parsed.presets : null;
+          if (!importBuffer || !importBuffer.length) throw new Error('no presets');
+          document.getElementById('importInfo').innerHTML =
+            `檔案包含 <strong style="color:var(--text)">${importBuffer.length}</strong> 個預設。<br>`
+            + `目前已有 <strong style="color:var(--text)">${presets.length}</strong> 個預設。<br><br>`
+            + `<span style="color:var(--text3);font-size:12px">`
+            + `覆蓋所有：清空現有，全部換成匯入的內容<br>`
+            + `合併追加：保留現有，把匯入的加在後面</span>`;
+          document.getElementById('importOverlay').classList.add('open');
+        } catch {
+          alert('檔案格式錯誤，請匯入有效的預設 JSON 檔。');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function closeImportModal() {
+      document.getElementById('importOverlay').classList.remove('open');
+      importBuffer = [];
+    }
+
+    function doImport(mode) {
+      if (!importBuffer.length) return;
+      if (mode === 'overwrite') presets = importBuffer.slice();
+      else presets = [...presets, ...importBuffer];
+      importBuffer = [];
+      document.getElementById('importOverlay').classList.remove('open');
+      saveToServer();
+      renderPads();
+    }
+
+    function openClearModal()  { document.getElementById('clearOverlay').classList.add('open'); }
+    function closeClearModal() { document.getElementById('clearOverlay').classList.remove('open'); }
+
+    function doClearPresets() {
+      presets = [];
+      activeIdx = -1;
+      closeClearModal();
+      saveToServer();
+      renderPads();
+    }
+
+    // ── Drag-and-drop reorder ─────────────────────────────
+    let dragSrcIdx = -1;
+    let dropTarget = null; // { idx, before }
+    let sortLocked = false;
+
+    function toggleSortLock() {
+      sortLocked = !sortLocked;
+      const btn = document.getElementById('sortLockBtn');
+      btn.textContent = sortLocked ? '🔒 排序' : '🔓 排序';
+      btn.classList.toggle('locked', sortLocked);
+      renderPads();
+    }
+
+    function clearDragClasses() {
+      document.querySelectorAll('.insert-before, .insert-after, .is-dragging').forEach(el =>
+        el.classList.remove('insert-before', 'insert-after', 'is-dragging'));
+    }
+
+    function onDragStart(e, i) {
+      dragSrcIdx = i;
+      dropTarget = null;
+      e.dataTransfer.effectAllowed = 'move';
+      setTimeout(() => e.currentTarget && e.currentTarget.classList.add('is-dragging'), 0);
+    }
+
+    function onDragOver(e, i) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (i === dragSrcIdx) return;
+      const rect = e.currentTarget.getBoundingClientRect();
+      const before = e.clientY < rect.top + rect.height / 2;
+      clearDragClasses();
+      document.querySelector('.is-dragging') || // keep ghost
+      e.currentTarget.classList.add(before ? 'insert-before' : 'insert-after');
+      dropTarget = { idx: i, before };
+    }
+
+    function onDragLeave(e) {
+      if (!e.currentTarget.contains(e.relatedTarget)) {
+        e.currentTarget.classList.remove('insert-before', 'insert-after');
+      }
+    }
+
+    function onDrop(e, i) {
+      e.preventDefault();
+      e.stopPropagation();
+      clearDragClasses();
+      if (dragSrcIdx < 0 || !dropTarget) { dragSrcIdx = -1; dropTarget = null; return; }
+      const { idx: targetIdx, before } = dropTarget;
+      if (dragSrcIdx === targetIdx) { dragSrcIdx = -1; dropTarget = null; return; }
+      const activePreset = activeIdx >= 0 ? presets[activeIdx] : null;
+      const item = presets.splice(dragSrcIdx, 1)[0];
+      let insertAt = dragSrcIdx < targetIdx
+        ? (before ? targetIdx - 1 : targetIdx)
+        : (before ? targetIdx   : targetIdx + 1);
+      insertAt = Math.max(0, Math.min(insertAt, presets.length));
+      presets.splice(insertAt, 0, item);
+      if (activePreset) activeIdx = presets.indexOf(activePreset);
+      dragSrcIdx = -1; dropTarget = null;
+      saveToServer();
+      renderPads();
+    }
+
+    function onDragEnd() {
+      clearDragClasses();
+      dragSrcIdx = -1; dropTarget = null;
+    }
+
+    function attachDrag(div, i) {
+      if (sortLocked) return;
+      div.setAttribute('draggable', 'true');
+      div.addEventListener('dragstart', e => onDragStart(e, i));
+      div.addEventListener('dragover',  e => onDragOver(e, i));
+      div.addEventListener('dragleave', onDragLeave);
+      div.addEventListener('drop',      e => onDrop(e, i));
+      div.addEventListener('dragend',   onDragEnd);
+    }
+
     // ── Pad grid ──────────────────────────────────────────
+    let viewMode = 'list';
+    let focusIdx = -1;
+
+    function toggleView() {
+      viewMode = viewMode === 'grid' ? 'list' : 'grid';
+      document.getElementById('viewToggleBtn').textContent = viewMode === 'grid' ? '☰ 列表' : '⊞ 卡片';
+      renderPads();
+    }
+
+    function navigateFocus(dir) {
+      const visible = presets.reduce((acc, p, i) => { if (!p.hidden) acc.push(i); return acc; }, []);
+      if (!visible.length) return;
+      if (focusIdx < 0) {
+        // Start from the active (playing) preset if available, otherwise from first/last
+        const anchor = activeIdx >= 0 ? activeIdx : (dir > 0 ? visible[visible.length - 1] : visible[0]);
+        const pos = visible.indexOf(anchor);
+        focusIdx = pos < 0 ? visible[0] : visible[(pos + dir + visible.length) % visible.length];
+      } else {
+        const pos = visible.indexOf(focusIdx);
+        focusIdx = pos < 0 ? visible[0] : visible[(pos + dir + visible.length) % visible.length];
+      }
+      renderPads();
+      const el = document.querySelector('.kbd-focus');
+      if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+
+    function clearFocusIdx() {
+      if (focusIdx >= 0) { focusIdx = -1; renderPads(); }
+    }
+
     function renderPads() {
       const grid = document.getElementById('padGrid');
       grid.innerHTML = '';
-      presets.forEach((p,i) => {
-        const running = activeIdx===i && st && st.mode==='timer' && !st.timer.paused;
-        const paused  = activeIdx===i && st && st.mode==='timer' &&  st.timer.paused;
-        const div = document.createElement('div');
-        div.className = 'pad' + (running?' running':paused?' paused-pad':'');
-        const badge = p.useGlobal ? '<span style="position:absolute;bottom:6px;right:8px;font-size:9px;color:var(--accent);opacity:.8">全域</span>' : '';
-        div.innerHTML = `
-          <button class="pad-edit-btn" onclick="event.stopPropagation();openEdit(${i})">✎</button>
-          <div class="pad-time">${fmtDur(p.seconds)}</div>
-          <div class="pad-name">${p.label}</div>${badge}`;
-        div.addEventListener('click', () => triggerPreset(i));
-        grid.appendChild(div);
-      });
-      const add = document.createElement('div');
-      add.className = 'pad pad-add';
-      add.innerHTML = '<div style="font-size:28px;color:var(--text2)">＋</div>';
-      add.addEventListener('click', () => openEdit(-1));
-      grid.appendChild(add);
+      grid.className = viewMode === 'list' ? 'pad-list' : 'pad-grid';
+
+      if (viewMode === 'list') {
+        presets.forEach((p, i) => {
+          const running = activeIdx===i && st && st.mode==='timer' && !st.timer.paused;
+          const paused  = activeIdx===i && st && st.mode==='timer' &&  st.timer.paused;
+          const div = document.createElement('div');
+          div.className = 'list-item'
+            + (running ? ' running' : paused ? ' paused-pad' : '')
+            + (p.hidden ? ' pad-hidden' : '')
+            + (focusIdx === i ? ' kbd-focus' : '');
+          const subtitle = p.title && p.title !== p.label
+            ? `<div class="list-subtitle">${p.title}</div>` : '';
+          div.innerHTML = `
+            <span class="list-time">${fmtDur(p.seconds)}</span>
+            <div class="list-info">
+              <div class="list-name">${p.label}</div>
+              ${subtitle}
+            </div>
+            ${p.useGlobal ? '<span class="list-global-badge">全域</span>' : ''}
+            <div class="list-actions">
+              <button class="list-act-btn" onclick="event.stopPropagation();triggerPreset(${i})" title="送出">▶</button>
+              <button class="list-act-btn" onclick="event.stopPropagation();openEdit(${i})" title="編輯">✎</button>
+            </div>`;
+          if (!p.hidden) div.addEventListener('click', () => triggerPreset(i));
+          div.addEventListener('contextmenu', e => showCtxMenu(e, i));
+          attachDrag(div, i);
+          grid.appendChild(div);
+        });
+        const add = document.createElement('div');
+        add.className = 'list-add';
+        add.textContent = '＋ 新增預設';
+        add.addEventListener('click', () => openEdit(-1));
+        grid.appendChild(add);
+      } else {
+        presets.forEach((p, i) => {
+          const running = activeIdx===i && st && st.mode==='timer' && !st.timer.paused;
+          const paused  = activeIdx===i && st && st.mode==='timer' &&  st.timer.paused;
+          const div = document.createElement('div');
+          div.className = 'pad'
+            + (running ? ' running' : paused ? ' paused-pad' : '')
+            + (p.hidden ? ' pad-hidden' : '')
+            + (focusIdx === i ? ' kbd-focus' : '');
+          const badge = p.useGlobal ? '<span style="position:absolute;bottom:6px;right:8px;font-size:9px;color:var(--accent);opacity:.8">全域</span>' : '';
+          div.innerHTML = `
+            <button class="pad-edit-btn" onclick="event.stopPropagation();openEdit(${i})">✎</button>
+            <div class="pad-time">${fmtDur(p.seconds)}</div>
+            <div class="pad-name">${p.label}</div>${badge}`;
+          if (!p.hidden) div.addEventListener('click', () => triggerPreset(i));
+          div.addEventListener('contextmenu', e => showCtxMenu(e, i));
+          attachDrag(div, i);
+          grid.appendChild(div);
+        });
+        const add = document.createElement('div');
+        add.className = 'pad pad-add';
+        add.innerHTML = '<div style="font-size:28px;color:var(--text2)">＋</div>';
+        add.addEventListener('click', () => openEdit(-1));
+        grid.appendChild(add);
+      }
     }
 
+    // ── Context menu ──────────────────────────────────────
+    let ctxIdx = -1;
+    const ctxMenu = document.getElementById('ctxMenu');
+
+    function showCtxMenu(e, i) {
+      e.preventDefault();
+      e.stopPropagation();
+      ctxIdx = i;
+      const isHidden = presets[i].hidden;
+      const btn = document.getElementById('ctxHideBtn');
+      btn.innerHTML = `<span class="ctx-ico">${isHidden ? '◉' : '◌'}</span>${isHidden ? '取消隱藏' : '隱藏'}`;
+      ctxMenu.style.display = 'block';
+      const x = Math.min(e.clientX, window.innerWidth  - ctxMenu.offsetWidth  - 6);
+      const y = Math.min(e.clientY, window.innerHeight - ctxMenu.offsetHeight - 6);
+      ctxMenu.style.left = x + 'px';
+      ctxMenu.style.top  = y + 'px';
+    }
+
+    function hideCtxMenu() { ctxMenu.style.display = 'none'; ctxIdx = -1; }
+
+    function ctxDo(action) {
+      const i = ctxIdx;
+      hideCtxMenu();
+      if (i < 0) return;
+      if (action === 'edit')      { openEdit(i); }
+      if (action === 'trigger')   { triggerPreset(i); }
+      if (action === 'duplicate') {
+        const copy = JSON.parse(JSON.stringify(presets[i]));
+        copy.label += ' 副本';
+        presets.push(copy);
+        saveToServer(); renderPads();
+      }
+      if (action === 'toggleHide') {
+        presets[i].hidden = !presets[i].hidden;
+        saveToServer(); renderPads();
+      }
+      if (action === 'delete') {
+        presets.splice(i, 1);
+        if (activeIdx === i) activeIdx = -1;
+        else if (activeIdx > i) activeIdx--;
+        saveToServer(); renderPads();
+      }
+    }
+
+    document.addEventListener('click', hideCtxMenu);
+    document.addEventListener('contextmenu', e => {
+      if (!e.target.closest('#ctxMenu')) hideCtxMenu();
+    });
+
     function triggerPreset(i) {
+      if (presets[i].hidden) return;
+      focusIdx = -1;
       activeIdx = i;
       const p = presets[i];
       // When useGlobal, send global settings as payload so server applies them
@@ -904,6 +1509,20 @@
       send({ type:'clearOverlay' });
     }
     document.getElementById('txtIn').addEventListener('keydown', e => { if(e.key==='Enter') sendTxt(); });
+
+    // ── Shortcuts modal ───────────────────────────────────
+    function openShortcutsModal()  { document.getElementById('shortcutsOverlay').classList.add('open'); }
+    function closeShortcutsModal() { document.getElementById('shortcutsOverlay').classList.remove('open'); }
+
+    function anyModalOpen() {
+      return ['overlay','globalOverlay','shortcutsOverlay','importOverlay','clearOverlay'].some(id =>
+        document.getElementById(id).classList.contains('open'))
+        || document.getElementById('helpOverlay').classList.contains('open');
+    }
+    function isTyping() {
+      const t = document.activeElement ? document.activeElement.tagName : '';
+      return t === 'INPUT' || t === 'TEXTAREA' || t === 'SELECT';
+    }
 
     // ── useGlobal toggle in preset modal ──────────────────
     function toggleUseGlobal() {
@@ -981,16 +1600,76 @@
       saveToServer(); closeModal(); renderPads();
     }
 
-    document.getElementById('overlay').addEventListener('click', e => {
-      if (e.target===document.getElementById('overlay')) closeModal();
+    // eTitle: Enter saves, Shift+Enter inserts newline
+    document.getElementById('eTitle').addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); savePreset(); }
     });
-    document.getElementById('globalOverlay').addEventListener('click', e => {
-      if (e.target===document.getElementById('globalOverlay')) closeGlobalModal();
-    });
+
     document.addEventListener('keydown', e => {
-      if (e.key==='Escape') { closeModal(); closeGlobalModal(); closeHelp(); }
-      if (e.key==='Enter' && document.getElementById('overlay').classList.contains('open')
-          && document.activeElement.tagName!=='BUTTON') savePreset();
+      if (e.key === 'Escape') {
+        if (document.getElementById('shortcutsOverlay').classList.contains('open')) { closeShortcutsModal(); return; }
+        if (document.getElementById('importOverlay').classList.contains('open'))    { closeImportModal(); return; }
+        if (document.getElementById('clearOverlay').classList.contains('open'))     { closeClearModal(); return; }
+        if (document.getElementById('helpOverlay').classList.contains('open'))      { closeHelp(); return; }
+        if (document.getElementById('overlay').classList.contains('open'))          { closeModal(); return; }
+        if (document.getElementById('globalOverlay').classList.contains('open'))    { closeGlobalModal(); return; }
+        // Main page Esc: clear focus preview, then toggle clock↔hide
+        clearFocusIdx();
+        if (st) {
+          if (st.mode === 'clock') { send({type:'hide'}); }
+          else { activeIdx = -1; send({type:'clock'}); renderPads(); }
+        }
+        return;
+      }
+
+      // Enter in preset modal saves
+      if (e.key === 'Enter'
+          && document.getElementById('overlay').classList.contains('open')
+          && document.activeElement.tagName !== 'BUTTON'
+          && document.activeElement.tagName !== 'TEXTAREA') {
+        savePreset(); return;
+      }
+
+      // Main page shortcuts — skip when a modal is open or user is typing
+      if (anyModalOpen() || isTyping()) return;
+
+      switch (e.key) {
+        case ' ':
+          e.preventDefault();
+          if (focusIdx >= 0) { triggerPreset(focusIdx); focusIdx = -1; renderPads(); }
+          else if (st && st.mode === 'timer') {
+            st.timer.paused ? send({type:'resume'}) : send({type:'pause'});
+          }
+          break;
+        case 'Backspace':
+          e.preventDefault();
+          if (st && st.mode === 'timer') {
+            send({type:'reset'});
+            setTimeout(() => send({type:'pause'}), 80);
+          }
+          break;
+        case 'ArrowUp': case 'ArrowLeft':
+          e.preventDefault(); navigateFocus(-1); break;
+        case 'ArrowDown': case 'ArrowRight':
+          e.preventDefault(); navigateFocus(1); break;
+        case 'Delete':
+          if (focusIdx >= 0) {
+            presets[focusIdx].hidden = !presets[focusIdx].hidden;
+            saveToServer(); renderPads();
+          }
+          break;
+        case 'd': case 'D':
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            if (focusIdx >= 0) {
+              const copy = JSON.parse(JSON.stringify(presets[focusIdx]));
+              copy.label += ' 副本';
+              presets.splice(focusIdx + 1, 0, copy);
+              saveToServer(); renderPads();
+            }
+          }
+          break;
+      }
     });
 
     // ── SSE ───────────────────────────────────────────────
@@ -1039,6 +1718,7 @@
     }
 
     // ── Init ──────────────────────────────────────────────
+    if (window.desktopWindow) document.documentElement.classList.add('desktop-app');
     loadFromServer();
     connect();
   </script>

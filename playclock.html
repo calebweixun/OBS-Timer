@@ -3,6 +3,8 @@
 <head>
   <title>OBS Playclock</title>
   <meta charset="utf-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; background: transparent; }
@@ -40,8 +42,9 @@
       font-size: 5vw;
       color: #ffffff;
       margin-bottom: 1vw;
-      white-space: nowrap;
+      white-space: pre-wrap;
       text-align: center;
+      line-height: 1.3;
     }
 
     #output {
@@ -53,8 +56,8 @@
       font-variant-numeric: tabular-nums;
     }
 
-    body.is-hidden #center,
-    body.is-hidden #border-frame { visibility: hidden; }
+    body.is-hidden #output,
+    body.is-hidden #title { visibility: hidden; }
   </style>
 </head>
 <body translate="no">
@@ -94,17 +97,23 @@
     }
 
     // ── Overlay flash ──
-    let overlayFlashTick    = null;
-    let lastOverlayActive   = false;
+    let overlayFlashTick  = null;
+    let lastOverlayActive = false;
+    let lastOverlaySeq    = -1;
 
-    function startOverlayFlash(fg, bg, interval) {
+    function startOverlayFlash(fg, bg) {
       if (overlayFlashTick) clearInterval(overlayFlashTick);
-      let s = false;
+      let count = 0;
       overlayEl.style.color = fg;
       overlayFlashTick = setInterval(() => {
-        s = !s;
-        overlayEl.style.color = s ? bg : fg;
-      }, interval || 500);
+        count++;
+        overlayEl.style.color = (count % 2 === 1) ? bg : fg;
+        if (count >= 10) { // 5 complete blinks
+          clearInterval(overlayFlashTick);
+          overlayFlashTick = null;
+          overlayEl.style.color = fg; // 恆亮
+        }
+      }, 100);
     }
 
     function stopOverlayFlash() {
@@ -155,11 +164,13 @@
     function render(st) {
       // Overlay text (shown above clock/timer, always flashes when active)
       const overlayActive = st.overlay && st.overlay.active && st.overlay.text;
+      const overlaySeq = st.overlay ? (st.overlay.seq || 0) : 0;
       if (overlayActive) {
         overlayEl.textContent = st.overlay.text;
-        overlayEl.style.display = '';
-        if (!lastOverlayActive) {
-          startOverlayFlash(st.flash.fg, st.flash.bg, st.flash.interval);
+        overlayEl.style.display = 'block';
+        if (!lastOverlayActive || overlaySeq !== lastOverlaySeq) {
+          startOverlayFlash(st.flash.fg, st.flash.bg);
+          lastOverlaySeq = overlaySeq;
         }
       } else {
         overlayEl.style.display = 'none';

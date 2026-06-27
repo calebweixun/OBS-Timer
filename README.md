@@ -39,6 +39,9 @@ npm run electron
 ```
 
 Electron 模式會自動開啟 Remote 視窗，無需手動打開瀏覽器。
+服務會監聽所有網路介面（`0.0.0.0`），可由同一區網的手機或平板遙控。請只在信任的網路中使用。
+
+可在 Remote 的「OBS 操作說明 → 更換 Port」永久設定連接埠；重新啟動 App 後生效。
 
 ### 方式三：打包成獨立應用
 
@@ -50,6 +53,8 @@ npm run build:linux  # Linux .AppImage
 ```
 
 輸出在 `dist/` 目錄。
+
+每次 push、pull request 或手動執行 GitHub Actions 時，也會自動建置 macOS、Windows、Linux 安裝檔並保存為 workflow artifacts。
 
 ---
 
