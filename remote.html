@@ -80,7 +80,17 @@
 
     /* ── Section ── */
     .sec { margin-bottom:24px; }
-    .sec-lbl { font-size:10px; text-transform:uppercase; letter-spacing:1.4px; color:var(--text3); margin-bottom:10px; padding-left:2px; }
+    .sec-hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+    .sec-lbl { font-size:10px; text-transform:uppercase; letter-spacing:1.4px; color:var(--text3); padding-left:2px; }
+    .global-btn {
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:8px; padding:5px 12px; font-size:11px; color:var(--text2);
+      cursor:pointer; font-family:inherit; transition:background .1s;
+    }
+    .global-btn:hover { background:var(--surf2); color:var(--text); }
+
+    /* dimmed = greyed-out when using global settings */
+    .dimmed { opacity:.3; pointer-events:none; user-select:none; transition:opacity .2s; }
 
     /* ── Pads ── */
     .pad-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:8px; }
@@ -148,6 +158,13 @@
     }
     .txt-send:hover { background:#444; }
     .txt-send:active { transform:scale(.95); }
+    .txt-clear {
+      background:none; border:1px solid var(--border);
+      border-radius:var(--rs); padding:10px 14px; color:var(--text3);
+      font-size:13px; font-family:inherit; cursor:pointer;
+      transition:background .1s, color .1s; white-space:nowrap;
+    }
+    .txt-clear:hover { background:var(--surface); color:var(--text2); }
 
     /* ── Help panel ── */
     .help-overlay {
@@ -333,7 +350,10 @@
 
   <!-- Presets -->
   <div class="sec">
-    <div class="sec-lbl">倒數預設</div>
+    <div class="sec-hdr">
+      <div class="sec-lbl">倒數預設</div>
+      <button class="global-btn" onclick="openGlobalModal()">⚙ 全域設定</button>
+    </div>
     <div class="pad-grid" id="padGrid"></div>
   </div>
 
@@ -349,8 +369,9 @@
       <button class="tbn danger" onclick="send({type:'hide'})"><span class="ico">✕</span>隱藏</button>
     </div>
     <div class="txt-bar">
-      <input class="txt-in" id="txtIn" placeholder="輸入文字顯示在畫面…">
-      <button class="txt-send" onclick="sendTxt()">傳送</button>
+      <input class="txt-in" id="txtIn" placeholder="疊加文字（顯示在時鐘上方並閃爍）…">
+      <button class="txt-send" onclick="sendTxt()">疊字</button>
+      <button class="txt-clear" onclick="clearOverlay()">清除</button>
     </div>
   </div>
 
@@ -415,6 +436,125 @@
     </div>
   </div>
 
+  <!-- ── Global Settings Modal ── -->
+  <div class="overlay" id="globalOverlay">
+    <div class="modal">
+      <div class="modal-hdr">
+        <h2>全域設定</h2>
+        <button class="modal-close" onclick="closeGlobalModal()">×</button>
+      </div>
+
+      <div class="msec">
+        <div class="msec-lbl">樣式</div>
+        <div class="fld-row">
+          <div class="fld" style="flex:0 0 auto">
+            <div class="fld-lbl">文字色</div>
+            <input type="color" id="gFg" value="#ffffff">
+          </div>
+          <div class="fld" style="flex:0 0 auto">
+            <div class="fld-lbl">底色</div>
+            <input type="color" id="gBg" value="#000000">
+          </div>
+          <div class="fld" style="flex:3"></div>
+        </div>
+        <div class="fld">
+          <div class="fld-lbl">字體</div>
+          <select class="min" id="gFont">
+            <option value="ui-monospace,'SF Mono','Courier New',monospace">SF Mono（等寬）</option>
+            <option value="-apple-system,'SF Pro Display','Helvetica Neue',sans-serif">SF Pro（無襯線）</option>
+            <option value="'Helvetica Neue',Arial,sans-serif">Helvetica Neue</option>
+            <option value="Georgia,'Times New Roman',serif">Georgia（襯線）</option>
+            <option value="Impact,'Arial Black',sans-serif">Impact（粗體）</option>
+            <option value="'Courier New',Courier,monospace">Courier New</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="msec">
+        <div class="msec-lbl">閃爍（倒數結束時）</div>
+        <div class="fld-toggle">
+          <button class="tog" id="gFlashEnd" onclick="toggleEl('gFlashEnd')"></button>
+          <span class="tog-lbl">倒數結束自動閃爍</span>
+        </div>
+        <div class="fld-row">
+          <div class="fld" style="flex:0 0 auto">
+            <div class="fld-lbl">顏色 A</div>
+            <input type="color" id="gFlashFg" value="#ffffff">
+          </div>
+          <div class="fld" style="flex:0 0 auto">
+            <div class="fld-lbl">顏色 B</div>
+            <input type="color" id="gFlashBg" value="#ff0000">
+          </div>
+          <div class="fld">
+            <div class="fld-lbl">間隔</div>
+            <div class="fld-unit">
+              <input class="min" id="gFlashMs" type="number" min="100" max="2000" step="50" value="500">
+              <span class="unit">ms</span>
+            </div>
+          </div>
+          <div class="fld" style="flex:2"></div>
+        </div>
+      </div>
+
+      <div class="msec">
+        <div class="msec-lbl">邊框</div>
+        <div class="fld-toggle">
+          <button class="tog" id="gBorderVis" onclick="toggleEl('gBorderVis')"></button>
+          <span class="tog-lbl">顯示邊框</span>
+        </div>
+        <div class="fld-row">
+          <div class="fld" style="flex:0 0 auto">
+            <div class="fld-lbl">顏色</div>
+            <input type="color" id="gBorderColor" value="#ffffff">
+          </div>
+          <div class="fld">
+            <div class="fld-lbl">粗細</div>
+            <div class="fld-unit">
+              <input class="min" id="gBorderW" type="number" min="1" max="20" value="3">
+              <span class="unit">px</span>
+            </div>
+          </div>
+          <div class="fld">
+            <div class="fld-lbl">圓角</div>
+            <div class="fld-unit">
+              <input class="min" id="gBorderR" type="number" min="0" max="200" value="24">
+              <span class="unit">px</span>
+            </div>
+          </div>
+          <div class="fld">
+            <div class="fld-lbl">內距</div>
+            <div class="fld-unit">
+              <input class="min" id="gBorderInset" type="number" min="0" max="200" value="30">
+              <span class="unit">px</span>
+            </div>
+          </div>
+        </div>
+        <div class="fld">
+          <div class="fld-lbl">線形</div>
+          <select class="min" id="gBorderStyle">
+            <option value="solid">實線 solid</option>
+            <option value="dashed">虛線 dashed</option>
+            <option value="dotted">點線 dotted</option>
+            <option value="double">雙線 double</option>
+          </select>
+        </div>
+        <div class="fld-toggle" style="margin-bottom:0">
+          <button class="tog" id="gBorderFlash" onclick="toggleEl('gBorderFlash','on-red')"></button>
+          <span class="tog-lbl">邊框隨閃爍</span>
+          <div style="display:flex;align-items:center;gap:8px;margin-left:16px">
+            <span style="font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--text3)">閃爍色</span>
+            <input type="color" id="gBorderFlashColor" value="#ff0000">
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-foot">
+        <button class="mbtn cancel" onclick="closeGlobalModal()">取消</button>
+        <button class="mbtn confirm" onclick="saveGlobal()">套用全域設定</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Edit Modal ── -->
   <div class="overlay" id="overlay">
     <div class="modal">
@@ -450,8 +590,13 @@
           </div>
           <div class="fld" style="flex:2"></div>
         </div>
+        <div class="fld-toggle" style="margin-top:4px;margin-bottom:0;padding-top:10px;border-top:1px solid rgba(255,255,255,.05)">
+          <button class="tog" id="eUseGlobal" onclick="toggleUseGlobal()"></button>
+          <span class="tog-lbl">跟隨全域設定（樣式 · 閃爍 · 邊框）</span>
+        </div>
       </div>
 
+      <div id="eSfbSections">
       <div class="msec">
         <div class="msec-lbl">樣式</div>
         <div class="fld-row">
@@ -556,6 +701,8 @@
         </div>
       </div>
 
+      </div><!-- /#eSfbSections -->
+
       <div class="modal-foot">
         <button class="mbtn del"     id="mDel" onclick="deletePreset()">刪除</button>
         <button class="mbtn cancel"            onclick="closeModal()">取消</button>
@@ -579,7 +726,6 @@
 
     // ── Help panel ────────────────────────────────────────
     function openHelp() {
-      // Fill in dynamic URLs
       const port = window.location.port || '8080';
       const host = window.location.hostname;
       document.getElementById('playclockUrl').textContent = `http://${host}:${port}/playclock.html`;
@@ -602,16 +748,77 @@
       document.getElementById(id).classList.toggle(onClass || 'on');
     }
     function setTog(id, val, onClass) {
-      document.getElementById(id).classList.toggle(onClass || 'on', val);
+      document.getElementById(id).classList.toggle(onClass || 'on', !!val);
     }
     function getTog(id, onClass) {
       return document.getElementById(id).classList.contains(onClass || 'on');
+    }
+
+    // ── Global settings ───────────────────────────────────
+    let globalSettings = {
+      style:  { fg:'#ffffff', bg:'transparent', font:"ui-monospace,'SF Mono','Courier New',monospace" },
+      flash:  { fg:'#ffffff', bg:'#ff0000', interval:500, flashOnEnd:true },
+      border: { visible:false, color:'#ffffff', width:3, radius:24, style:'solid', inset:30, flash:false, flashColor:'#ff0000' },
+    };
+
+    function openGlobalModal() {
+      const g = globalSettings;
+      document.getElementById('gFg').value            = g.style.fg;
+      document.getElementById('gBg').value            = g.style.bg === 'transparent' ? '#000000' : g.style.bg;
+      document.getElementById('gFont').value          = g.style.font;
+      setTog('gFlashEnd', g.flash.flashOnEnd);
+      document.getElementById('gFlashFg').value       = g.flash.fg;
+      document.getElementById('gFlashBg').value       = g.flash.bg;
+      document.getElementById('gFlashMs').value       = g.flash.interval;
+      setTog('gBorderVis', g.border.visible);
+      document.getElementById('gBorderColor').value   = g.border.color;
+      document.getElementById('gBorderW').value       = g.border.width;
+      document.getElementById('gBorderR').value       = g.border.radius;
+      document.getElementById('gBorderInset').value   = g.border.inset;
+      document.getElementById('gBorderStyle').value   = g.border.style;
+      setTog('gBorderFlash', g.border.flash, 'on-red');
+      document.getElementById('gBorderFlashColor').value = g.border.flashColor;
+      document.getElementById('globalOverlay').classList.add('open');
+    }
+
+    function closeGlobalModal() { document.getElementById('globalOverlay').classList.remove('open'); }
+
+    function saveGlobal() {
+      globalSettings = {
+        style: {
+          fg:   document.getElementById('gFg').value,
+          bg:   document.getElementById('gBg').value,
+          font: document.getElementById('gFont').value,
+        },
+        flash: {
+          fg:         document.getElementById('gFlashFg').value,
+          bg:         document.getElementById('gFlashBg').value,
+          interval:   Number(document.getElementById('gFlashMs').value) || 500,
+          flashOnEnd: getTog('gFlashEnd'),
+        },
+        border: {
+          visible:    getTog('gBorderVis'),
+          color:      document.getElementById('gBorderColor').value,
+          width:      Number(document.getElementById('gBorderW').value) || 3,
+          radius:     Number(document.getElementById('gBorderR').value) || 0,
+          inset:      Number(document.getElementById('gBorderInset').value) || 30,
+          style:      document.getElementById('gBorderStyle').value,
+          flash:      getTog('gBorderFlash', 'on-red'),
+          flashColor: document.getElementById('gBorderFlashColor').value,
+        },
+      };
+      // Broadcast to all clients so playclock knows the new global
+      send({ type:'global', ...globalSettings });
+      // Persist settings (presets + global)
+      saveToServer();
+      closeGlobalModal();
     }
 
     // ── Presets ───────────────────────────────────────────
     function mkPreset(label, seconds) {
       return {
         label, title: label, seconds,
+        useGlobal: false,
         style:  { fg:'#ffffff', bg:'transparent', font:"ui-monospace,'SF Mono','Courier New',monospace" },
         flash:  { fg:'#ffffff', bg:'#ff0000', interval:500, flashOnEnd:true },
         border: { visible:false, color:'#ffffff', width:3, radius:24, style:'solid', inset:30, flash:false, flashColor:'#ff0000' },
@@ -620,10 +827,30 @@
     const DEFAULTS = ['1 分鐘','3 分鐘','5 分鐘','10 分鐘','15 分鐘','30 分鐘']
       .map((l,i) => mkPreset(l,[60,180,300,600,900,1800][i]));
 
-    let presets   = JSON.parse(localStorage.getItem('obs-presets')||'null') || DEFAULTS;
+    let presets   = [];
     let activeIdx = -1, editIdx = -1, st = null, clockTick = null;
 
-    function savePresets() { localStorage.setItem('obs-presets', JSON.stringify(presets)); }
+    // ── Server settings persistence ───────────────────────
+    async function loadFromServer() {
+      try {
+        const resp = await fetch('/api/settings');
+        const data = await resp.json();
+        if (data.presets && data.presets.length > 0) presets = data.presets;
+        else presets = DEFAULTS;
+        if (data.global) globalSettings = { ...globalSettings, ...data.global };
+      } catch {
+        presets = DEFAULTS;
+      }
+      renderPads();
+    }
+
+    function saveToServer() {
+      fetch('/api/settings', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ presets, global: globalSettings }),
+      }).catch(() => {});
+    }
 
     // ── Pad grid ──────────────────────────────────────────
     function renderPads() {
@@ -634,10 +861,11 @@
         const paused  = activeIdx===i && st && st.mode==='timer' &&  st.timer.paused;
         const div = document.createElement('div');
         div.className = 'pad' + (running?' running':paused?' paused-pad':'');
+        const badge = p.useGlobal ? '<span style="position:absolute;bottom:6px;right:8px;font-size:9px;color:var(--accent);opacity:.8">全域</span>' : '';
         div.innerHTML = `
           <button class="pad-edit-btn" onclick="event.stopPropagation();openEdit(${i})">✎</button>
           <div class="pad-time">${fmtDur(p.seconds)}</div>
-          <div class="pad-name">${p.label}</div>`;
+          <div class="pad-name">${p.label}</div>${badge}`;
         div.addEventListener('click', () => triggerPreset(i));
         grid.appendChild(div);
       });
@@ -651,8 +879,11 @@
     function triggerPreset(i) {
       activeIdx = i;
       const p = presets[i];
-      send({ type:'timer', seconds:p.seconds, title:p.title||p.label,
-             style:{...p.style}, flash:{...p.flash}, border:{...p.border} });
+      // When useGlobal, send global settings as payload so server applies them
+      const style  = p.useGlobal ? { ...globalSettings.style }  : { ...p.style };
+      const flash  = p.useGlobal ? { ...globalSettings.flash }  : { ...p.flash };
+      const border = p.useGlobal ? { ...globalSettings.border } : { ...p.border };
+      send({ type:'timer', seconds:p.seconds, title:p.title||p.label, style, flash, border });
       renderPads();
     }
 
@@ -662,16 +893,25 @@
         headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
     }
     function switchClock() { activeIdx=-1; send({type:'clock'}); renderPads(); }
+
     function sendTxt() {
       const v = document.getElementById('txtIn').value.trim();
       if (!v) return;
-      activeIdx=-1;
-      send({type:'text', text:v, title:''});
-      renderPads();
+      send({ type:'overlay', text:v });
+    }
+    function clearOverlay() {
+      document.getElementById('txtIn').value = '';
+      send({ type:'clearOverlay' });
     }
     document.getElementById('txtIn').addEventListener('keydown', e => { if(e.key==='Enter') sendTxt(); });
 
-    // ── Modal ─────────────────────────────────────────────
+    // ── useGlobal toggle in preset modal ──────────────────
+    function toggleUseGlobal() {
+      toggleEl('eUseGlobal');
+      document.getElementById('eSfbSections').classList.toggle('dimmed', getTog('eUseGlobal'));
+    }
+
+    // ── Preset modal ──────────────────────────────────────
     function openEdit(i) {
       editIdx = i;
       const isNew = i < 0;
@@ -682,6 +922,8 @@
       document.getElementById('eTitle').value        = p.title||'';
       document.getElementById('eMin').value          = Math.floor(p.seconds/60);
       document.getElementById('eSec').value          = p.seconds%60;
+      setTog('eUseGlobal', p.useGlobal || false);
+      document.getElementById('eSfbSections').classList.toggle('dimmed', p.useGlobal || false);
       document.getElementById('eFg').value           = p.style.fg;
       document.getElementById('eBg').value           = p.style.bg==='transparent'?'#000000':p.style.bg;
       document.getElementById('eFont').value         = p.style.font;
@@ -710,8 +952,9 @@
       const sec   = Number(document.getElementById('eSec').value)||0;
       const seconds = min*60+sec;
       if (seconds <= 0) { document.getElementById('eMin').focus(); return; }
+      const useGlobal = getTog('eUseGlobal');
       const p = {
-        label, title:title||label, seconds,
+        label, title:title||label, seconds, useGlobal,
         style:  { fg:document.getElementById('eFg').value, bg:document.getElementById('eBg').value,
                   font:document.getElementById('eFont').value },
         flash:  { fg:document.getElementById('eFlashFg').value, bg:document.getElementById('eFlashBg').value,
@@ -727,7 +970,7 @@
                   flashColor:document.getElementById('eBorderFlashColor').value },
       };
       if (editIdx<0) presets.push(p); else presets[editIdx]=p;
-      savePresets(); closeModal(); renderPads();
+      saveToServer(); closeModal(); renderPads();
     }
 
     function deletePreset() {
@@ -735,14 +978,17 @@
       presets.splice(editIdx,1);
       if (activeIdx===editIdx) activeIdx=-1;
       else if (activeIdx>editIdx) activeIdx--;
-      savePresets(); closeModal(); renderPads();
+      saveToServer(); closeModal(); renderPads();
     }
 
     document.getElementById('overlay').addEventListener('click', e => {
       if (e.target===document.getElementById('overlay')) closeModal();
     });
+    document.getElementById('globalOverlay').addEventListener('click', e => {
+      if (e.target===document.getElementById('globalOverlay')) closeGlobalModal();
+    });
     document.addEventListener('keydown', e => {
-      if (e.key==='Escape') { closeModal(); closeHelp(); }
+      if (e.key==='Escape') { closeModal(); closeGlobalModal(); closeHelp(); }
       if (e.key==='Enter' && document.getElementById('overlay').classList.contains('open')
           && document.activeElement.tagName!=='BUTTON') savePreset();
     });
@@ -792,7 +1038,8 @@
       };
     }
 
-    renderPads();
+    // ── Init ──────────────────────────────────────────────
+    loadFromServer();
     connect();
   </script>
 </body>

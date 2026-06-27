@@ -24,6 +24,17 @@
       z-index: 5;
     }
 
+    #overlay-text {
+      font-family: -apple-system, 'Helvetica Neue', sans-serif;
+      font-size: 7vw;
+      font-weight: 600;
+      color: #ffffff;
+      margin-bottom: 2vw;
+      white-space: nowrap;
+      text-align: center;
+      display: none;
+    }
+
     #title {
       font-family: -apple-system, 'Helvetica Neue', sans-serif;
       font-size: 5vw;
@@ -49,14 +60,16 @@
 <body translate="no">
   <div id="border-frame"></div>
   <div id="center">
+    <div id="overlay-text"></div>
     <div id="title"></div>
     <div id="output"></div>
   </div>
 
   <script>
-    const titleEl  = document.getElementById('title');
-    const outputEl = document.getElementById('output');
-    const borderEl = document.getElementById('border-frame');
+    const titleEl   = document.getElementById('title');
+    const outputEl  = document.getElementById('output');
+    const borderEl  = document.getElementById('border-frame');
+    const overlayEl = document.getElementById('overlay-text');
 
     function pad(n) { return n < 10 ? '0' + n : '' + n; }
 
@@ -78,6 +91,24 @@
     }
     function stopClock() {
       if (clockTick) { clearInterval(clockTick); clockTick = null; }
+    }
+
+    // ── Overlay flash ──
+    let overlayFlashTick    = null;
+    let lastOverlayActive   = false;
+
+    function startOverlayFlash(fg, bg, interval) {
+      if (overlayFlashTick) clearInterval(overlayFlashTick);
+      let s = false;
+      overlayEl.style.color = fg;
+      overlayFlashTick = setInterval(() => {
+        s = !s;
+        overlayEl.style.color = s ? bg : fg;
+      }, interval || 500);
+    }
+
+    function stopOverlayFlash() {
+      if (overlayFlashTick) { clearInterval(overlayFlashTick); overlayFlashTick = null; }
     }
 
     // ── Flash ──
@@ -122,6 +153,20 @@
 
     // ── Render ──
     function render(st) {
+      // Overlay text (shown above clock/timer, always flashes when active)
+      const overlayActive = st.overlay && st.overlay.active && st.overlay.text;
+      if (overlayActive) {
+        overlayEl.textContent = st.overlay.text;
+        overlayEl.style.display = '';
+        if (!lastOverlayActive) {
+          startOverlayFlash(st.flash.fg, st.flash.bg, st.flash.interval);
+        }
+      } else {
+        overlayEl.style.display = 'none';
+        stopOverlayFlash();
+      }
+      lastOverlayActive = !!overlayActive;
+
       // Base style (when not flashing)
       if (!st.flash.active) {
         document.body.style.background = st.style.bg;

@@ -2,9 +2,33 @@ const http = require('http');
 const fs   = require('fs');
 const path = require('path');
 
-const PORT = Number(process.env.PORT) || 8080;
+let ROOT = __dirname;
+const settingsPath = () => path.join(ROOT, 'settings.json');
 
-// ── Server state ───────────────────────────────────────────
+// ── Default global config ───────────────────────────────────
+const DEFAULT_GLOBAL = {
+  style:  { fg: '#ffffff', bg: 'transparent', font: "ui-monospace,'SF Mono','Courier New',monospace" },
+  flash:  { fg: '#ffffff', bg: '#ff0000', interval: 500, flashOnEnd: true },
+  border: { visible: false, color: '#ffffff', width: 3, radius: 24, style: 'solid', inset: 30, flash: false, flashColor: '#ff0000' },
+};
+
+// ── Settings (presets + global — persisted to settings.json) ─
+let savedSettings = { presets: [], global: JSON.parse(JSON.stringify(DEFAULT_GLOBAL)) };
+
+function loadSettings() {
+  try {
+    const raw = fs.readFileSync(settingsPath(), 'utf8');
+    const parsed = JSON.parse(raw);
+    if (parsed.presets) savedSettings.presets = parsed.presets;
+    if (parsed.global)  savedSettings.global  = { ...JSON.parse(JSON.stringify(DEFAULT_GLOBAL)), ...parsed.global };
+  } catch {}
+}
+
+function writeSettings() {
+  try { fs.writeFileSync(settingsPath(), JSON.stringify(savedSettings, null, 2)); } catch (e) { console.error('settings save error:', e.message); }
+}
+
+// ── Server state ────────────────────────────────────────────
 const state = {
   mode:       'clock',
   timer:      { total: 0, remaining: 0, paused: false },
@@ -14,9 +38,15 @@ const state = {
   flash:      { active: false, fg: '#ffffff', bg: '#ff0000', interval: 500 },
   flashOnEnd: true,
   border:     { visible: false, color: '#ffffff', width: 3, radius: 24, style: 'solid', inset: 30, flash: false, flashColor: '#ff0000' },
+  overlay:    { text: '', active: false },
+  global:     JSON.parse(JSON.stringify(DEFAULT_GLOBAL)),
 };
 
-// ── SSE clients ────────────────────────────────────────────
+// Apply saved global to state on startup
+loadSettings();
+Object.assign(state.global, savedSettings.global);
+
+// ── SSE clients ─────────────────────────────────────────────
 const clients = new Set();
 
 function broadcast() {
@@ -24,7 +54,7 @@ function broadcast() {
   for (const res of clients) res.write(msg);
 }
 
-// ── Timer tick ─────────────────────────────────────────────
+// ── Timer tick ──────────────────────────────────────────────
 let tick = null;
 
 function stopTick() {
@@ -46,7 +76,7 @@ function startTick() {
   }, 1000);
 }
 
-// ── Command handler ────────────────────────────────────────
+// ── Command handler ─────────────────────────────────────────
 function handle(cmd) {
   switch (cmd.type) {
 
@@ -101,7 +131,7 @@ function handle(cmd) {
       stopTick();
       state.mode         = 'text';
       state.flash.active = false;
-      state.text         = cmd.text  || '';
+      state.text         = cmd.text || '';
       if (cmd.title !== undefined) state.title = cmd.title;
       break;
 
@@ -128,23 +158,43 @@ function handle(cmd) {
       Object.assign(state.border, cmd);
       delete state.border.type;
       break;
+
+    // ── Overlay: show text above clock/timer without replacing it ──
+    case 'overlay':
+      state.overlay.text   = cmd.text || '';
+      state.overlay.active = !!state.overlay.text;
+      break;
+
+    case 'clearOverlay':
+      state.overlay.text   = '';
+      state.overlay.active = false;
+      break;
+
+    // ── Global style/flash/border ──────────────────────────
+    case 'global':
+      if (cmd.style)  Object.assign(state.global.style,  cmd.style);
+      if (cmd.flash)  Object.assign(state.global.flash,  cmd.flash);
+      if (cmd.border) Object.assign(state.global.border, cmd.border);
+      // Sync to savedSettings and persist
+      savedSettings.global = JSON.parse(JSON.stringify(state.global));
+      writeSettings();
+      break;
   }
   broadcast();
 }
 
-// ── HTTP server ────────────────────────────────────────────
+// ── HTTP server ─────────────────────────────────────────────
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js':   'application/javascript',
   '.css':  'text/css',
 };
 
-let ROOT = __dirname;
-
 const server = http.createServer((req, res) => {
   const urlObj   = new URL(req.url, 'http://localhost');
   const pathname = urlObj.pathname;
 
+  // SSE stream
   if (pathname === '/events') {
     res.writeHead(200, {
       'Content-Type':  'text/event-stream',
@@ -157,6 +207,7 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // Command API
   if (pathname === '/api/command' && req.method === 'POST') {
     let body = '';
     req.on('data', d => body += d);
@@ -168,6 +219,37 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // Settings persistence API
+  if (pathname === '/api/settings') {
+    if (req.method === 'GET') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(savedSettings));
+      return;
+    }
+    if (req.method === 'POST') {
+      let body = '';
+      req.on('data', d => body += d);
+      req.on('end', () => {
+        try {
+          const data = JSON.parse(body);
+          if (Array.isArray(data.presets)) savedSettings.presets = data.presets;
+          if (data.global) {
+            savedSettings.global = data.global;
+            // Also update live state so new clients get current global
+            Object.assign(state.global.style,  data.global.style  || {});
+            Object.assign(state.global.flash,  data.global.flash  || {});
+            Object.assign(state.global.border, data.global.border || {});
+          }
+          writeSettings();
+        } catch {}
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end('{"ok":true}');
+      });
+      return;
+    }
+  }
+
+  // Static files
   const aliases = { '/': '/remote.html', '/index.html': '/remote.html', '/clock.html': '/playclock.html' };
   const file = path.join(ROOT, aliases[pathname] || pathname);
   const ext  = path.extname(file);
