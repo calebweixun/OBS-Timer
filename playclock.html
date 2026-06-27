@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>OBS Playclock</title>
+  <meta charset="utf-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: transparent; }
+
+    #center {
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    #title {
+      font-family: -apple-system, 'Helvetica Neue', sans-serif;
+      font-size: 5vw;
+      color: #ffffff;
+      margin-bottom: 1vw;
+      white-space: nowrap;
+      text-align: center;
+    }
+    #output {
+      font-family: ui-monospace, 'SF Mono', 'Courier New', monospace;
+      font-size: 18vw;
+      color: #ffffff;
+      line-height: 1;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+    body.is-hidden #center { visibility: hidden; }
+  </style>
+</head>
+<body translate="no">
+  <div id="center">
+    <div id="title"></div>
+    <div id="output"></div>
+  </div>
+
+  <script>
+    const titleEl  = document.getElementById('title');
+    const outputEl = document.getElementById('output');
+
+    function pad(n) { return n < 10 ? '0' + n : '' + n; }
+
+    function fmtTime(sec) {
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      const s = sec % 60;
+      return (h > 0 ? pad(h) + ':' : '') + pad(m) + ':' + pad(s);
+    }
+
+    // ── Clock (client-side) ──
+    let clockTick = null;
+    function startClock() {
+      if (clockTick) return;
+      clockTick = setInterval(() => {
+        const d = new Date();
+        outputEl.innerText = pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+      }, 500);
+    }
+    function stopClock() {
+      if (clockTick) { clearInterval(clockTick); clockTick = null; }
+    }
+
+    // ── Flash (client-side) ──
+    let flashTick  = null;
+    let flashState = false;
+    let lastFlashActive = false;
+
+    function startFlash(fg, bg, interval) {
+      if (flashTick) clearInterval(flashTick);
+      flashState = false;
+      flashTick = setInterval(() => {
+        flashState = !flashState;
+        document.body.style.background = flashState ? bg  : fg;
+        outputEl.style.color           = flashState ? fg  : bg;
+        titleEl.style.color            = flashState ? fg  : bg;
+      }, interval);
+    }
+
+    function stopFlash() {
+      if (flashTick) { clearInterval(flashTick); flashTick = null; }
+      document.body.style.background = '';
+      outputEl.style.color = '';
+      titleEl.style.color  = '';
+    }
+
+    // ── Render state ──
+    function render(st) {
+      // Background / text color from style
+      if (!st.flash.active) {
+        document.body.style.background = st.style.bg;
+        outputEl.style.color  = st.style.fg;
+        titleEl.style.color   = st.style.fg;
+      }
+
+      // Title
+      if (st.title) {
+        titleEl.innerText     = st.title;
+        titleEl.style.display = '';
+      } else {
+        titleEl.style.display = 'none';
+      }
+
+      // Flash
+      if (st.flash.active && !lastFlashActive) {
+        startFlash(st.flash.fg, st.flash.bg, st.flash.interval);
+      } else if (!st.flash.active && lastFlashActive) {
+        stopFlash();
+        document.body.style.background = st.style.bg;
+        outputEl.style.color = st.style.fg;
+        titleEl.style.color  = st.style.fg;
+      }
+      lastFlashActive = st.flash.active;
+
+      // Visibility
+      document.body.classList.toggle('is-hidden', st.mode === 'hidden');
+
+      // Content
+      if (st.mode === 'clock') {
+        startClock();
+      } else {
+        stopClock();
+        if (st.mode === 'timer') {
+          outputEl.innerText = fmtTime(st.timer.remaining);
+        } else if (st.mode === 'text') {
+          outputEl.innerText = st.text;
+        } else {
+          outputEl.innerText = '';
+        }
+      }
+    }
+
+    // ── SSE connection ──
+    function connect() {
+      const es = new EventSource('/events');
+      es.onmessage = e => render(JSON.parse(e.data));
+      es.onerror   = () => { es.close(); setTimeout(connect, 2000); };
+    }
+    connect();
+  </script>
+</body>
+</html>

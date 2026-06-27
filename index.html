@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>OBS Timer</title>
+	<meta charset="utf-8">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js"></script>
+	<style>
+		* {
+			margin: 0;
+			padding: 0;
+			box-sizing: border-box;
+		}
+		html, body {
+			width: 100%;
+			height: 100%;
+			margin: 0;
+			background: transparent;
+			overflow: hidden;
+		}
+		#center {
+			position: fixed;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+		}
+		#title {
+			font-family: sans-serif;
+			font-size: 5vw;
+			color: white;
+			margin-bottom: 1.5vw;
+			text-align: center;
+			white-space: nowrap;
+		}
+		#output {
+			font-family: monospace;
+			font-size: 18vw;
+			color: white;
+			text-align: center;
+			line-height: 1;
+			white-space: nowrap;
+		}
+	</style>
+</head>
+
+<body translate="no">
+	<div id="center">
+		<div id="title"></div>
+		<div id="output"></div>
+	</div>
+</body>
+
+<script type="text/javascript">
+	// URL query string parser
+	var urlParams, timer1;
+	(function () {
+		var match,
+			pl     = /\+/g,
+			search = /([^&=]+)=?([^&]*)/g,
+			decode = function (s) { return decodeURIComponent(s.replace(pl, " ")); },
+			query  = window.location.search.substring(1);
+		urlParams = {};
+		while (match = search.exec(query))
+			urlParams[decode(match[1])] = decode(match[2]);
+	})();
+
+	var output = document.getElementById("output");
+	var titleEl = document.getElementById("title");
+
+	// 標題
+	if (urlParams["title"]) {
+		titleEl.innerText = urlParams["title"];
+	} else {
+		titleEl.style.display = "none";
+	}
+
+	function showClock() {
+		setInterval(function () {
+			output.innerText = moment().format(urlParams["format"] || 'HH:mm:ss');
+		}, 500);
+	}
+
+	function getSetTime() {
+		var setTime;
+		if (urlParams["time"]) {
+			setTime = Number(urlParams["time"]);
+		} else {
+			setTime = 0;
+			if (urlParams["hour"]) setTime += Number(urlParams["hour"]) * 3600;
+			if (urlParams["min"])  setTime += Number(urlParams["min"]) * 60;
+			if (urlParams["sec"])  setTime += Number(urlParams["sec"]);
+		}
+		showRegTime(setTime);
+		return setTime;
+	}
+
+	function showRegTime(time) {
+		var h = Math.floor(time / 3600);
+		var m = Math.floor((time % 3600) / 60);
+		var s = time % 60;
+		output.innerText =
+			(h < 10 ? "0" + h : h) + ":" +
+			(m < 10 ? "0" + m : m) + ":" +
+			(s < 10 ? "0" + s : s);
+	}
+
+	function showMessage(msg) {
+		output.innerText = msg;
+	}
+
+	function startFlash(msg) {
+		var flashInterval = Number(urlParams["flashInterval"]) || 500;
+		// 讀取底色與文字色，預設白底黑字
+		var bgColor  = urlParams["flashBg"]   || "#ffffff";
+		var fgColor  = urlParams["flashFg"]   || "#000000";
+		var state = false;
+		if (msg) output.innerText = msg;
+		setInterval(function () {
+			state = !state;
+			document.body.style.background = state ? bgColor  : fgColor;
+			output.style.color             = state ? fgColor  : bgColor;
+			titleEl.style.color            = state ? fgColor  : bgColor;
+		}, flashInterval);
+	}
+
+	function countDown(time, msg) {
+		if (time == 0) return;
+		timer1 = setInterval(function () {
+			time--;
+			showRegTime(time);
+			if (time == 0) {
+				clearInterval(timer1);
+				startFlash(msg || null);
+			}
+		}, 1000);
+	}
+
+	// 模式選擇
+	var mode = urlParams["mode"] || "clock";
+	if (mode === "timer") {
+		countDown(getSetTime(), urlParams["msg"] || null);
+	} else {
+		showClock();
+	}
+
+	// 自訂樣式（URL 覆寫）
+	if (urlParams["style"])     output.setAttribute("style", urlParams["style"]);
+	if (urlParams["bodyStyle"]) document.body.setAttribute("style", urlParams["bodyStyle"]);
+	if (urlParams["titleStyle"]) titleEl.setAttribute("style", urlParams["titleStyle"]);
+</script>
+</html>
