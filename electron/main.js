@@ -1,7 +1,7 @@
-const { app, BrowserWindow, Menu, shell } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain } = require('electron');
+const fs = require('fs');
 const path = require('path');
 
-const PORT = Number(process.env.PORT) || 8080;
 const ROOT = path.join(__dirname, '..');
 
 let win = null;
@@ -13,22 +13,48 @@ function createWindow() {
     minWidth:  800,
     minHeight: 600,
     title:     'OBS Timer Remote',
+    frame:     false,
+    titleBarStyle: 'hidden',
+    backgroundColor: '#0d0d0d',
     webPreferences: {
       nodeIntegration:  false,
       contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js'),
     },
   });
 
   Menu.setApplicationMenu(null);
 
-  win.loadURL(`http://localhost:${PORT}/remote.html`);
+  win.loadURL(`http://localhost:${activePort}/remote.html`);
 
   win.on('closed', () => { win = null; });
 }
 
+function readSavedPort() {
+  const envPort = Number(process.env.PORT);
+  if (Number.isInteger(envPort) && envPort >= 1024 && envPort <= 65535) return envPort;
+  try {
+    const settings = JSON.parse(fs.readFileSync(path.join(app.getPath('userData'), 'settings.json'), 'utf8'));
+    const savedPort = Number(settings.app && settings.app.port);
+    if (Number.isInteger(savedPort) && savedPort >= 1024 && savedPort <= 65535) return savedPort;
+  } catch {}
+  return 8080;
+}
+
+let activePort = 8080;
+
 app.whenReady().then(async () => {
+  activePort = readSavedPort();
   const { start } = require('../server');
-  await start(PORT, ROOT);
+  await start(activePort, ROOT, { dataDir: app.getPath('userData') });
+
+  ipcMain.on('window-control', (event, action) => {
+    const target = BrowserWindow.fromWebContents(event.sender);
+    if (!target) return;
+    if (action === 'close') target.close();
+    if (action === 'minimize') target.minimize();
+    if (action === 'maximize') target.isMaximized() ? target.unmaximize() : target.maximize();
+  });
   createWindow();
 
   app.on('activate', () => {
