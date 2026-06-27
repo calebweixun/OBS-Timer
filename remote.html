@@ -210,13 +210,18 @@
     .pad.is-dragging, .list-item.is-dragging { opacity:.25; }
 
     /* insertion line indicator */
-    .pad.insert-before::before, .list-item.insert-before::before,
-    .pad.insert-after::after,   .list-item.insert-after::after {
+    .list-item.insert-before::before, .list-item.insert-after::after {
       content:''; position:absolute; left:0; right:0; height:2px;
       background:var(--accent); border-radius:1px; z-index:20;
     }
-    .pad.insert-before::before, .list-item.insert-before::before { top:-3px; }
-    .pad.insert-after::after,   .list-item.insert-after::after   { bottom:-3px; }
+    .list-item.insert-before::before { top:-3px; }
+    .list-item.insert-after::after   { bottom:-3px; }
+    .pad.insert-before::before, .pad.insert-after::after {
+      content:''; position:absolute; top:0; bottom:0; width:2px;
+      background:var(--accent); border-radius:1px; z-index:20;
+    }
+    .pad.insert-before::before { left:-5px; }
+    .pad.insert-after::after   { right:-5px; }
 
     /* sort lock button */
     .view-btn.locked { color:var(--yellow); border-color:rgba(255,214,10,.35); }
@@ -1300,7 +1305,9 @@
       e.dataTransfer.dropEffect = 'move';
       if (i === dragSrcIdx) return;
       const rect = e.currentTarget.getBoundingClientRect();
-      const before = e.clientY < rect.top + rect.height / 2;
+      const before = viewMode === 'grid'
+        ? e.clientX < rect.left + rect.width / 2
+        : e.clientY < rect.top + rect.height / 2;
       clearDragClasses();
       document.querySelector('.is-dragging') || // keep ghost
       e.currentTarget.classList.add(before ? 'insert-before' : 'insert-after');
@@ -1358,17 +1365,29 @@
       renderPads();
     }
 
-    function navigateFocus(dir) {
+    function gridColumnCount() {
+      if (viewMode !== 'grid') return 1;
+      const template = getComputedStyle(document.getElementById('padGrid')).gridTemplateColumns;
+      return Math.max(1, template.split(/\s+/).filter(Boolean).length);
+    }
+
+    function navigateFocus(direction) {
       const visible = presets.reduce((acc, p, i) => { if (!p.hidden) acc.push(i); return acc; }, []);
       if (!visible.length) return;
+      const columns = gridColumnCount();
+      const step = direction === 'left' ? -1
+        : direction === 'right' ? 1
+        : direction === 'up' ? -columns
+        : columns;
       if (focusIdx < 0) {
-        // Start from the active (playing) preset if available, otherwise from first/last
-        const anchor = activeIdx >= 0 ? activeIdx : (dir > 0 ? visible[visible.length - 1] : visible[0]);
+        // Start from the active preset when possible; otherwise focus the first visible pad.
+        const anchor = activeIdx >= 0 ? activeIdx : visible[0];
         const pos = visible.indexOf(anchor);
-        focusIdx = pos < 0 ? visible[0] : visible[(pos + dir + visible.length) % visible.length];
+        focusIdx = pos < 0 ? visible[0] : visible[pos];
       } else {
         const pos = visible.indexOf(focusIdx);
-        focusIdx = pos < 0 ? visible[0] : visible[(pos + dir + visible.length) % visible.length];
+        const next = Math.max(0, Math.min((pos < 0 ? 0 : pos) + step, visible.length - 1));
+        focusIdx = visible[next];
       }
       renderPads();
       const el = document.querySelector('.kbd-focus');
@@ -1661,10 +1680,14 @@
             setTimeout(() => send({type:'pause'}), 80);
           }
           break;
-        case 'ArrowUp': case 'ArrowLeft':
-          e.preventDefault(); navigateFocus(-1); break;
-        case 'ArrowDown': case 'ArrowRight':
-          e.preventDefault(); navigateFocus(1); break;
+        case 'ArrowUp':
+          e.preventDefault(); navigateFocus('up'); break;
+        case 'ArrowDown':
+          e.preventDefault(); navigateFocus('down'); break;
+        case 'ArrowLeft':
+          e.preventDefault(); navigateFocus('left'); break;
+        case 'ArrowRight':
+          e.preventDefault(); navigateFocus('right'); break;
         case 'Delete':
           if (focusIdx >= 0) {
             presets[focusIdx].hidden = !presets[focusIdx].hidden;
