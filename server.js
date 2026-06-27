@@ -139,7 +139,9 @@ const MIME = {
   '.css':  'text/css',
 };
 
-http.createServer((req, res) => {
+let ROOT = __dirname;
+
+const server = http.createServer((req, res) => {
   const urlObj   = new URL(req.url, 'http://localhost');
   const pathname = urlObj.pathname;
 
@@ -167,7 +169,7 @@ http.createServer((req, res) => {
   }
 
   const aliases = { '/': '/remote.html', '/index.html': '/remote.html', '/clock.html': '/playclock.html' };
-  const file = path.join(__dirname, aliases[pathname] || pathname);
+  const file = path.join(ROOT, aliases[pathname] || pathname);
   const ext  = path.extname(file);
 
   fs.readFile(file, (err, data) => {
@@ -175,9 +177,22 @@ http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': MIME[ext] || 'text/plain' });
     res.end(data);
   });
-
-}).listen(PORT, () => {
-  console.log(`\nOBS Timer  http://localhost:${PORT}`);
-  console.log(`  remote     →  http://localhost:${PORT}/remote.html`);
-  console.log(`  playclock  →  http://localhost:${PORT}/playclock.html\n`);
 });
+
+function start(port, root) {
+  if (root) ROOT = root;
+  return new Promise((resolve) => {
+    server.listen(port, '127.0.0.1', () => {
+      console.log(`\nOBS Timer  http://localhost:${port}`);
+      console.log(`  remote     →  http://localhost:${port}/remote.html`);
+      console.log(`  playclock  →  http://localhost:${port}/playclock.html\n`);
+      resolve(port);
+    });
+  });
+}
+
+if (require.main === module) {
+  start(Number(process.env.PORT) || 8080);
+}
+
+module.exports = { start };

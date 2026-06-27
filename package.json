@@ -1,0 +1,44 @@
+{
+  "name": "obs-timer-remote",
+  "version": "1.1.0",
+  "description": "OBS Timer Remote — countdown timer control panel for OBS Studio",
+  "main": "electron/main.js",
+  "scripts": {
+    "start":       "node server.js",
+    "electron":    "electron .",
+    "build":       "electron-builder",
+    "build:mac":   "electron-builder --mac",
+    "build:win":   "electron-builder --win",
+    "build:linux": "electron-builder --linux"
+  },
+  "devDependencies": {
+    "electron":         "^33.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId":       "com.calebweixun.obs-timer-remote",
+    "productName": "OBS Timer Remote",
+    "copyright":   "© 2024 calebweixun",
+    "directories": { "output": "dist" },
+    "files": [
+      "electron/**/*",
+      "server.js",
+      "remote.html",
+      "playclock.html",
+      "index.html",
+      "start.sh"
+    ],
+    "mac": {
+      "category": "public.app-category.utilities",
+      "icon": "build/icon.icns"
+    },
+    "win": {
+      "target": "nsis",
+      "icon":   "build/icon.ico"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon":   "build/icon.png"
+    }
+  }
+}
