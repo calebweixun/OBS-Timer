@@ -6,632 +6,487 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     :root {
-      --bg:       #0d0d0d;
-      --card:     #1a1a1a;
-      --surface:  #262626;
-      --surface2: #333333;
-      --border:   rgba(255,255,255,0.08);
-      --accent:   #007aff;
-      --green:    #34c759;
-      --red:      #ff3b30;
-      --yellow:   #ffd60a;
-      --text:     #ffffff;
-      --text2:    rgba(255,255,255,0.55);
-      --text3:    rgba(255,255,255,0.25);
-      --radius:   14px;
-      --radius-s: 10px;
+      --bg:      #0d0d0d;
+      --card:    #1a1a1a;
+      --surface: #262626;
+      --surf2:   #333333;
+      --border:  rgba(255,255,255,0.08);
+      --accent:  #007aff;
+      --green:   #34c759;
+      --red:     #ff3b30;
+      --yellow:  #ffd60a;
+      --text:    #ffffff;
+      --text2:   rgba(255,255,255,0.55);
+      --text3:   rgba(255,255,255,0.25);
+      --r:       14px;
+      --rs:      10px;
     }
-    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: -apple-system, 'SF Pro Display', 'Helvetica Neue', sans-serif;
+      font-family: -apple-system,'SF Pro Display','Helvetica Neue',sans-serif;
       min-height: 100vh;
-      padding: 20px 20px 40px;
-      max-width: 900px;
+      padding: 20px 20px 48px;
+      max-width: 920px;
       margin: 0 auto;
     }
 
     /* ── Header ── */
-    .header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 24px;
-    }
-    .header h1 {
-      font-size: 24px;
-      font-weight: 700;
-      letter-spacing: -0.4px;
-    }
+    .hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:22px; }
+    .hdr h1 { font-size:22px; font-weight:700; letter-spacing:-.3px; }
     .badge {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 6px 14px;
-      font-size: 12px;
-      color: var(--text2);
+      display:flex; align-items:center; gap:7px;
+      background:var(--card); border:1px solid var(--border);
+      border-radius:20px; padding:6px 14px; font-size:12px; color:var(--text2);
     }
-    .dot {
-      width: 7px; height: 7px;
-      border-radius: 50%;
-      background: var(--text3);
-      transition: background 0.3s;
-    }
-    .dot.live { background: var(--green); animation: blink 2s infinite; }
-    .dot.dead { background: var(--red); }
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.35} }
+    .dot { width:7px;height:7px;border-radius:50%;background:var(--text3);transition:background .3s; }
+    .dot.live { background:var(--green); animation:blink 2s infinite; }
+    .dot.dead { background:var(--red); }
+    @keyframes blink { 0%,100%{opacity:1}50%{opacity:.3} }
 
     /* ── Now Playing ── */
-    .now-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 18px 22px 16px;
-      margin-bottom: 28px;
+    .now {
+      background:var(--card); border:1px solid var(--border);
+      border-radius:var(--r); padding:18px 22px 14px; margin-bottom:24px;
     }
-    .now-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 12px;
+    .now-top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; }
+    .now-time {
+      font-size:52px; font-family:ui-monospace,'SF Mono',monospace;
+      font-variant-numeric:tabular-nums; font-weight:300; letter-spacing:-2px; line-height:1;
     }
-    .now-main {
-      font-size: 52px;
-      font-family: ui-monospace, 'SF Mono', monospace;
-      font-variant-numeric: tabular-nums;
-      font-weight: 300;
-      letter-spacing: -2px;
-      line-height: 1;
-    }
-    .now-meta {
-      text-align: right;
-    }
-    .now-mode {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 1.2px;
-      color: var(--text3);
-      margin-bottom: 6px;
-    }
-    .now-label {
-      font-size: 15px;
-      color: var(--text2);
-    }
-    .progress-bar {
-      height: 3px;
-      background: var(--surface);
-      border-radius: 2px;
-      overflow: hidden;
-    }
-    .progress-fill {
-      height: 100%;
-      background: var(--green);
-      border-radius: 2px;
-      transition: width 0.9s linear;
-      width: 0%;
-    }
-    .progress-fill.paused { background: var(--yellow); transition: none; }
-    .paused-tag {
-      display: none;
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--yellow);
-      margin-top: 8px;
-    }
-    .paused-tag.visible { display: block; }
+    .now-right { text-align:right; }
+    .now-mode { font-size:10px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); margin-bottom:5px; }
+    .now-lbl  { font-size:14px; color:var(--text2); }
+    .prog { height:3px; background:var(--surface); border-radius:2px; overflow:hidden; margin-bottom:6px; }
+    .prog-fill { height:100%; border-radius:2px; transition:width .9s linear; width:0%; background:var(--green); }
+    .prog-fill.paused { background:var(--yellow); transition:none; }
+    .paused-hint { font-size:11px; letter-spacing:.8px; color:var(--yellow); display:none; }
+    .paused-hint.show { display:block; }
 
     /* ── Section ── */
-    .section-label {
-      font-size: 10px;
-      text-transform: uppercase;
-      letter-spacing: 1.4px;
-      color: var(--text3);
-      margin-bottom: 10px;
-      padding-left: 2px;
-    }
-    .section { margin-bottom: 28px; }
+    .sec { margin-bottom:24px; }
+    .sec-lbl { font-size:10px; text-transform:uppercase; letter-spacing:1.4px; color:var(--text3); margin-bottom:10px; padding-left:2px; }
 
-    /* ── Pad grid ── */
-    .pad-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-      gap: 8px;
-    }
+    /* ── Pads ── */
+    .pad-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:8px; }
     .pad {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 14px 14px 12px;
-      cursor: pointer;
-      user-select: none;
-      position: relative;
-      min-height: 88px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      transition: background 0.08s, border-color 0.08s, transform 0.08s;
+      background:var(--card); border:1px solid var(--border); border-radius:var(--r);
+      padding:14px 14px 12px; cursor:pointer; user-select:none;
+      position:relative; min-height:88px;
+      display:flex; flex-direction:column; justify-content:space-between;
+      transition:background .08s, border-color .08s, transform .08s;
     }
-    .pad:hover { background: var(--surface); }
-    .pad:active { transform: scale(0.95); }
-    .pad.running {
-      background: var(--green);
-      border-color: var(--green);
-    }
-    .pad.running .pad-time,
-    .pad.running .pad-name { color: #000 !important; }
-    .pad.paused-pad {
-      background: #2a2400;
-      border-color: var(--yellow);
-    }
-    .pad.paused-pad .pad-time { color: var(--yellow); }
-    .pad-time {
-      font-size: 26px;
-      font-weight: 600;
-      font-variant-numeric: tabular-nums;
-      letter-spacing: -1px;
-      color: var(--text);
-      line-height: 1;
-    }
-    .pad-name {
-      font-size: 11px;
-      color: var(--text2);
-      margin-top: 6px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
+    .pad:hover { background:var(--surface); }
+    .pad:active { transform:scale(.95); }
+    .pad.running { background:var(--green); border-color:var(--green); }
+    .pad.running .pad-time, .pad.running .pad-name { color:#000 !important; }
+    .pad.paused-pad { background:#2a2400; border-color:var(--yellow); }
+    .pad.paused-pad .pad-time { color:var(--yellow); }
+    .pad-time { font-size:26px; font-weight:600; font-variant-numeric:tabular-nums; letter-spacing:-1px; color:var(--text); line-height:1; }
+    .pad-name { font-size:11px; color:var(--text2); margin-top:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .pad-edit-btn {
-      position: absolute;
-      top: 6px; right: 6px;
-      background: none;
-      border: none;
-      cursor: pointer;
-      opacity: 0;
-      font-size: 14px;
-      padding: 4px;
-      color: var(--text2);
-      transition: opacity 0.15s;
-      line-height: 1;
+      position:absolute; top:6px; right:6px;
+      background:none; border:none; cursor:pointer;
+      opacity:0; font-size:13px; padding:4px; color:var(--text2); transition:opacity .15s;
     }
-    .pad:hover .pad-edit-btn { opacity: 1; }
-    .pad.running .pad-edit-btn { color: #000; }
-
-    /* Add pad */
+    .pad:hover .pad-edit-btn { opacity:1; }
+    .pad.running .pad-edit-btn { color:#000; }
     .pad-add {
-      background: none;
-      border: 1px dashed var(--surface2);
-      justify-content: center;
-      align-items: center;
-      opacity: 0.5;
-      transition: opacity 0.15s, border-color 0.15s;
+      background:none; border:1px dashed var(--surf2);
+      justify-content:center; align-items:center;
+      opacity:.45; transition:opacity .15s, border-color .15s;
     }
-    .pad-add:hover { opacity: 0.9; border-color: var(--text3); background: none; }
-    .pad-add-icon { font-size: 28px; color: var(--text2); }
+    .pad-add:hover { opacity:.9; border-color:var(--text3); background:none; }
 
     /* ── Transport ── */
-    .transport {
-      display: flex;
-      gap: 8px;
-      align-items: stretch;
-    }
-    .transport-divider {
-      width: 1px;
-      background: var(--border);
-      margin: 0 4px;
-      align-self: stretch;
-    }
+    .transport { display:flex; gap:8px; align-items:stretch; }
+    .tdiv { width:1px; background:var(--border); margin:0 4px; }
     .tbn {
-      flex: 1;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-s);
-      padding: 12px 8px;
-      color: var(--text);
-      font-size: 12px;
-      font-family: inherit;
-      cursor: pointer;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 5px;
-      transition: background 0.08s, transform 0.08s;
-      min-width: 60px;
+      flex:1; background:var(--surface); border:1px solid var(--border);
+      border-radius:var(--rs); padding:12px 6px; color:var(--text);
+      font-size:12px; font-family:inherit; cursor:pointer;
+      display:flex; flex-direction:column; align-items:center; gap:5px;
+      transition:background .08s, transform .08s; min-width:56px;
     }
-    .tbn:hover { background: var(--surface2); }
-    .tbn:active { transform: scale(0.93); }
-    .tbn .ico { font-size: 20px; line-height: 1; }
-    .tbn.blue { background: #0055cc22; border-color: var(--accent); color: var(--accent); }
-    .tbn.blue:hover { background: #0055cc44; }
-    .tbn.danger { background: #cc000022; border-color: var(--red); color: var(--red); }
-    .tbn.danger:hover { background: #cc000044; }
+    .tbn:hover { background:var(--surf2); }
+    .tbn:active { transform:scale(.93); }
+    .tbn .ico { font-size:18px; line-height:1; }
+    .tbn.blue { background:#0055cc1a; border-color:var(--accent); color:var(--accent); }
+    .tbn.blue:hover { background:#0055cc33; }
+    .tbn.danger { background:#cc00001a; border-color:var(--red); color:var(--red); }
+    .tbn.danger:hover { background:#cc000033; }
 
-    /* ── Message ── */
-    .msg-row {
-      display: flex;
-      gap: 8px;
+    /* ── Text bar ── */
+    .txt-bar { display:flex; gap:8px; margin-top:10px; }
+    .txt-in {
+      flex:1; background:var(--card); border:1px solid var(--border);
+      border-radius:var(--rs); padding:10px 14px; color:var(--text);
+      font-size:14px; font-family:inherit; outline:none; transition:border-color .15s;
     }
-    .txt-input {
-      flex: 1;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-s);
-      padding: 12px 16px;
-      color: var(--text);
-      font-size: 15px;
-      font-family: inherit;
-      outline: none;
-      transition: border-color 0.15s;
+    .txt-in:focus { border-color:var(--accent); }
+    .txt-in::placeholder { color:var(--text3); }
+    .txt-send {
+      background:var(--surf2); border:1px solid var(--border);
+      border-radius:var(--rs); padding:10px 18px; color:var(--text);
+      font-size:13px; font-weight:500; font-family:inherit; cursor:pointer;
+      transition:background .1s, transform .08s; white-space:nowrap;
     }
-    .txt-input:focus { border-color: var(--accent); }
-    .txt-input::placeholder { color: var(--text3); }
-    .send-btn {
-      background: var(--accent);
-      border: none;
-      border-radius: var(--radius-s);
-      padding: 12px 20px;
-      color: #fff;
-      font-size: 14px;
-      font-weight: 600;
-      font-family: inherit;
-      cursor: pointer;
-      transition: opacity 0.1s, transform 0.08s;
-      white-space: nowrap;
-    }
-    .send-btn:hover { opacity: 0.85; }
-    .send-btn:active { transform: scale(0.95); }
+    .txt-send:hover { background:#444; }
+    .txt-send:active { transform:scale(.95); }
 
-    /* ── Style controls ── */
-    .style-row {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 16px 20px;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      flex-wrap: wrap;
+    /* ── Modal overlay ── */
+    .overlay {
+      display:none; position:fixed; inset:0;
+      background:rgba(0,0,0,.72); z-index:100;
+      justify-content:center; align-items:flex-start;
+      padding:40px 16px 40px;
+      overflow-y:auto;
     }
-    .style-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 12px;
-      color: var(--text2);
-    }
-    .style-sep {
-      width: 1px; height: 24px;
-      background: var(--border);
-    }
-    input[type="color"] {
-      width: 30px; height: 30px;
-      border-radius: 8px;
-      border: 2px solid var(--border);
-      cursor: pointer;
-      padding: 0;
-      background: none;
-      -webkit-appearance: none;
-    }
-    input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
-    input[type="color"]::-webkit-color-swatch { border: none; border-radius: 6px; }
-    .flash-ms {
-      width: 52px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 7px;
-      padding: 5px 8px;
-      color: var(--text);
-      font-size: 12px;
-      text-align: center;
-      outline: none;
-      font-family: monospace;
-    }
-    .flash-ms:focus { border-color: var(--accent); }
-    /* iOS-style toggle */
-    .toggle-wrap { display: flex; align-items: center; gap: 6px; cursor: pointer; }
-    .toggle {
-      width: 40px; height: 24px;
-      background: var(--surface2);
-      border-radius: 12px;
-      position: relative;
-      transition: background 0.2s;
-      border: none;
-      cursor: pointer;
-      flex-shrink: 0;
-    }
-    .toggle::after {
-      content: '';
-      position: absolute;
-      width: 20px; height: 20px;
-      background: #fff;
-      border-radius: 50%;
-      top: 2px; left: 2px;
-      transition: left 0.2s;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.4);
-    }
-    .toggle.on { background: var(--red); }
-    .toggle.on::after { left: 18px; }
-
-    /* ── Edit modal ── */
-    .modal-overlay {
-      display: none;
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,0.7);
-      z-index: 100;
-      justify-content: center;
-      align-items: center;
-    }
-    .modal-overlay.open { display: flex; }
+    .overlay.open { display:flex; }
     .modal {
-      background: #1f1f1f;
-      border: 1px solid var(--border);
-      border-radius: 18px;
-      padding: 24px;
-      width: 300px;
-      box-shadow: 0 24px 60px rgba(0,0,0,0.6);
+      background:#1e1e1e; border:1px solid rgba(255,255,255,.1);
+      border-radius:20px; width:100%; max-width:380px;
+      box-shadow:0 32px 80px rgba(0,0,0,.7);
+      overflow:hidden; margin:auto;
     }
-    .modal h2 { font-size: 17px; font-weight: 600; margin-bottom: 18px; }
-    .modal-field { margin-bottom: 14px; }
-    .modal-field label { display: block; font-size: 11px; color: var(--text2); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.8px; }
-    .modal-input {
-      width: 100%;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 10px 12px;
-      color: var(--text);
-      font-size: 15px;
-      font-family: inherit;
-      outline: none;
+    .modal-hdr {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:18px 20px 14px;
+      border-bottom:1px solid rgba(255,255,255,.07);
     }
-    .modal-input:focus { border-color: var(--accent); }
-    .modal-actions { display: flex; gap: 8px; margin-top: 20px; }
-    .modal-btn {
-      flex: 1;
-      padding: 11px;
-      border-radius: 10px;
-      border: none;
-      font-size: 15px;
-      font-family: inherit;
-      cursor: pointer;
-      font-weight: 500;
+    .modal-hdr h2 { font-size:16px; font-weight:600; }
+    .modal-close {
+      background:none; border:none; color:var(--text2);
+      font-size:20px; cursor:pointer; padding:4px; line-height:1;
     }
-    .modal-btn.cancel { background: var(--surface); color: var(--text2); }
-    .modal-btn.confirm { background: var(--accent); color: #fff; }
-    .modal-btn.del { background: #ff3b3022; color: var(--red); border: 1px solid var(--red); flex: 0; padding: 11px 16px; }
+
+    /* Modal sections */
+    .msec { padding:16px 20px; border-bottom:1px solid rgba(255,255,255,.05); }
+    .msec:last-of-type { border-bottom:none; }
+    .msec-lbl { font-size:10px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); margin-bottom:12px; }
+
+    /* Form rows */
+    .mrow { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+    .mrow:last-child { margin-bottom:0; }
+    .mlbl { font-size:12px; color:var(--text2); min-width:60px; }
+    .min {
+      flex:1; background:var(--surface); border:1px solid var(--border);
+      border-radius:8px; padding:8px 12px; color:var(--text);
+      font-size:14px; font-family:inherit; outline:none; transition:border-color .15s;
+    }
+    .min:focus { border-color:var(--accent); }
+    .min-sm { width:64px; flex:none; }
+    .min-xs { width:52px; flex:none; text-align:center; font-family:monospace; }
+    select.min { cursor:pointer; }
+    select.min option { background:#2c2c2e; }
+
+    /* Color swatch */
+    input[type="color"] {
+      width:32px; height:32px; border-radius:8px;
+      border:2px solid var(--border); cursor:pointer;
+      padding:0; background:none; -webkit-appearance:none; flex:none;
+    }
+    input[type="color"]::-webkit-color-swatch-wrapper { padding:0; }
+    input[type="color"]::-webkit-color-swatch { border:none; border-radius:6px; }
+
+    /* Toggle */
+    .tog-wrap { display:flex; align-items:center; gap:8px; cursor:pointer; }
+    .tog {
+      width:40px; height:24px; background:var(--surf2);
+      border-radius:12px; position:relative;
+      border:none; cursor:pointer; transition:background .2s; flex:none;
+    }
+    .tog::after {
+      content:''; position:absolute; width:20px; height:20px;
+      background:#fff; border-radius:50%; top:2px; left:2px;
+      transition:left .2s; box-shadow:0 1px 3px rgba(0,0,0,.4);
+    }
+    .tog.on { background:var(--green); }
+    .tog.on::after { left:18px; }
+    .tog.on-red { background:var(--red); }
+    .tog-lbl { font-size:12px; color:var(--text2); }
+
+    /* Modal actions */
+    .modal-foot {
+      display:flex; gap:8px; padding:14px 20px 18px;
+      border-top:1px solid rgba(255,255,255,.07);
+    }
+    .mbtn {
+      flex:1; padding:11px; border-radius:10px; border:none;
+      font-size:14px; font-family:inherit; cursor:pointer; font-weight:500;
+      transition:opacity .1s, transform .08s;
+    }
+    .mbtn:active { transform:scale(.96); }
+    .mbtn.cancel  { background:var(--surface); color:var(--text2); }
+    .mbtn.confirm { background:var(--accent); color:#fff; }
+    .mbtn.del     { background:#ff3b3018; color:var(--red); border:1px solid #ff3b3044; flex:0; padding:11px 14px; }
+
+    .inline-sep { width:1px; height:20px; background:var(--border); }
+    .unit { font-size:11px; color:var(--text3); }
   </style>
 </head>
 <body>
 
   <!-- Header -->
-  <div class="header">
+  <div class="hdr">
     <h1>OBS Remote</h1>
     <div class="badge">
       <div class="dot" id="dot"></div>
-      <span id="connText">連線中…</span>
+      <span id="connTxt">連線中…</span>
     </div>
   </div>
 
   <!-- Now Playing -->
-  <div class="now-card">
+  <div class="now">
     <div class="now-top">
-      <div class="now-main" id="nowMain">--:--</div>
-      <div class="now-meta">
-        <div class="now-mode" id="nowModeTag">—</div>
-        <div class="now-label" id="nowLabel"></div>
+      <div class="now-time" id="nowTime">--:--</div>
+      <div class="now-right">
+        <div class="now-mode" id="nowMode">—</div>
+        <div class="now-lbl"  id="nowLbl"></div>
       </div>
     </div>
-    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
-    <div class="paused-tag" id="pausedTag">⏸ 已暫停</div>
+    <div class="prog"><div class="prog-fill" id="progFill"></div></div>
+    <div class="paused-hint" id="pausedHint">⏸ 已暫停</div>
   </div>
 
   <!-- Presets -->
-  <div class="section">
-    <div class="section-label">倒數預設</div>
+  <div class="sec">
+    <div class="sec-lbl">倒數預設</div>
     <div class="pad-grid" id="padGrid"></div>
   </div>
 
   <!-- Transport -->
-  <div class="section">
-    <div class="section-label">控制</div>
+  <div class="sec">
+    <div class="sec-lbl">控制</div>
     <div class="transport">
-      <button class="tbn" id="tbnResume" onclick="send({type:'resume'})">
-        <span class="ico">▶</span>繼續
-      </button>
-      <button class="tbn" id="tbnPause" onclick="send({type:'pause'})">
-        <span class="ico">⏸</span>暫停
-      </button>
-      <button class="tbn" onclick="send({type:'reset'})">
-        <span class="ico">↺</span>重置
-      </button>
-      <div class="transport-divider"></div>
-      <button class="tbn blue" onclick="switchClock()">
-        <span class="ico">🕐</span>時鐘
-      </button>
-      <button class="tbn danger" onclick="send({type:'hide'})">
-        <span class="ico">✕</span>隱藏
-      </button>
+      <button class="tbn" onclick="send({type:'resume'})"><span class="ico">▶</span>繼續</button>
+      <button class="tbn" onclick="send({type:'pause'})"><span class="ico">⏸</span>暫停</button>
+      <button class="tbn" onclick="send({type:'reset'})"><span class="ico">↺</span>重置</button>
+      <div class="tdiv"></div>
+      <button class="tbn blue"   onclick="switchClock()"><span class="ico">🕐</span>時鐘</button>
+      <button class="tbn danger" onclick="send({type:'hide'})"><span class="ico">✕</span>隱藏</button>
+    </div>
+    <div class="txt-bar">
+      <input class="txt-in" id="txtIn" placeholder="輸入文字顯示在畫面…">
+      <button class="txt-send" onclick="sendTxt()">傳送</button>
     </div>
   </div>
 
-  <!-- Message -->
-  <div class="section">
-    <div class="section-label">自訂文字</div>
-    <div class="msg-row">
-      <input class="txt-input" id="msgInput" placeholder="輸入要顯示在畫面上的文字…" />
-      <button class="send-btn" onclick="sendMsg()">傳送</button>
-    </div>
-  </div>
+  <!-- ── Edit Modal ── -->
+  <div class="overlay" id="overlay">
+    <div class="modal">
+      <div class="modal-hdr">
+        <h2 id="mTitle">編輯預設</h2>
+        <button class="modal-close" onclick="closeModal()">×</button>
+      </div>
 
-  <!-- Style -->
-  <div class="section">
-    <div class="section-label">樣式</div>
-    <div class="style-row">
-      <div class="style-item">
-        文字
-        <input type="color" id="clrFg" value="#ffffff" oninput="updateStyle()">
-      </div>
-      <div class="style-item">
-        底色
-        <input type="color" id="clrBg" value="#000000" oninput="updateStyle()">
-      </div>
-      <div class="style-sep"></div>
-      <div class="style-item">
-        閃爍
-        <input type="color" id="flashFg" value="#ffffff" title="閃爍文字色">
-        <span style="color:var(--text3)">/</span>
-        <input type="color" id="flashBg" value="#ff0000" title="閃爍底色">
-        <input class="flash-ms" id="flashMs" value="500" type="number" min="100" max="2000" step="50">
-        <span style="font-size:11px;color:var(--text3)">ms</span>
-        <div class="toggle-wrap" onclick="toggleFlash()">
-          <button class="toggle" id="flashToggle"></button>
-          <span id="flashLabel" style="font-size:11px;color:var(--text3)">OFF</span>
+      <!-- 基本 -->
+      <div class="msec">
+        <div class="msec-lbl">基本</div>
+        <div class="mrow">
+          <span class="mlbl">標籤</span>
+          <input class="min" id="eLabel" placeholder="顯示在遙控按鈕上">
+        </div>
+        <div class="mrow">
+          <span class="mlbl">畫面標題</span>
+          <input class="min" id="eTitle" placeholder="顯示在倒數上方（留空則不顯示）">
+        </div>
+        <div class="mrow">
+          <span class="mlbl">時間</span>
+          <input class="min min-sm" id="eMin" type="number" min="0" placeholder="分">
+          <span class="unit">分</span>
+          <input class="min min-sm" id="eSec" type="number" min="0" max="59" placeholder="秒">
+          <span class="unit">秒</span>
         </div>
       </div>
-    </div>
-  </div>
 
-  <!-- Edit Modal -->
-  <div class="modal-overlay" id="modal">
-    <div class="modal">
-      <h2 id="modalTitle">編輯預設</h2>
-      <div class="modal-field">
-        <label>標籤</label>
-        <input class="modal-input" id="editLabel" placeholder="休息時間">
+      <!-- 樣式 -->
+      <div class="msec">
+        <div class="msec-lbl">樣式</div>
+        <div class="mrow">
+          <span class="mlbl">文字色</span>
+          <input type="color" id="eFg" value="#ffffff">
+          <span class="mlbl" style="margin-left:8px">底色</span>
+          <input type="color" id="eBg" value="#000000">
+        </div>
+        <div class="mrow">
+          <span class="mlbl">字體</span>
+          <select class="min" id="eFont">
+            <option value="ui-monospace,'SF Mono','Courier New',monospace">SF Mono（等寬）</option>
+            <option value="-apple-system,'SF Pro Display','Helvetica Neue',sans-serif">SF Pro（無襯線）</option>
+            <option value="'Helvetica Neue',Arial,sans-serif">Helvetica Neue</option>
+            <option value="Georgia,'Times New Roman',serif">Georgia（襯線）</option>
+            <option value="Impact,'Arial Black',sans-serif">Impact（粗體）</option>
+            <option value="'Courier New',Courier,monospace">Courier New</option>
+          </select>
+        </div>
       </div>
-      <div class="modal-field">
-        <label>分鐘</label>
-        <input class="modal-input" id="editMin" type="number" min="0" placeholder="5">
+
+      <!-- 閃爍 -->
+      <div class="msec">
+        <div class="msec-lbl">閃爍（倒數結束時）</div>
+        <div class="mrow">
+          <div class="tog-wrap" onclick="toggleEl('eFlashEnd')">
+            <button class="tog" id="eFlashEnd"></button>
+            <span class="tog-lbl" id="eFlashEndLbl">倒數結束自動閃爍</span>
+          </div>
+        </div>
+        <div class="mrow">
+          <span class="mlbl">顏色 A</span>
+          <input type="color" id="eFlashFg" value="#ffffff">
+          <span class="mlbl" style="margin-left:8px">顏色 B</span>
+          <input type="color" id="eFlashBg" value="#ff0000">
+        </div>
+        <div class="mrow">
+          <span class="mlbl">間隔</span>
+          <input class="min min-xs" id="eFlashMs" type="number" min="100" max="2000" step="50" value="500">
+          <span class="unit">ms</span>
+        </div>
       </div>
-      <div class="modal-field">
-        <label>秒數（分鐘以外的秒）</label>
-        <input class="modal-input" id="editSec" type="number" min="0" max="59" placeholder="0">
+
+      <!-- 邊框 -->
+      <div class="msec">
+        <div class="msec-lbl">邊框</div>
+        <div class="mrow">
+          <div class="tog-wrap" onclick="toggleEl('eBorderVis')">
+            <button class="tog" id="eBorderVis"></button>
+            <span class="tog-lbl">顯示邊框</span>
+          </div>
+        </div>
+        <div class="mrow">
+          <span class="mlbl">顏色</span>
+          <input type="color" id="eBorderColor" value="#ffffff">
+          <span class="mlbl" style="margin-left:8px">粗細</span>
+          <input class="min min-xs" id="eBorderW" type="number" min="1" max="20" value="3">
+          <span class="unit">px</span>
+        </div>
+        <div class="mrow">
+          <span class="mlbl">圓角</span>
+          <input class="min min-xs" id="eBorderR" type="number" min="0" max="200" value="24">
+          <span class="unit">px</span>
+          <span class="mlbl" style="margin-left:8px">內距</span>
+          <input class="min min-xs" id="eBorderInset" type="number" min="0" max="200" value="30">
+          <span class="unit">px</span>
+        </div>
+        <div class="mrow">
+          <span class="mlbl">線形</span>
+          <select class="min" id="eBorderStyle">
+            <option value="solid">實線 solid</option>
+            <option value="dashed">虛線 dashed</option>
+            <option value="dotted">點線 dotted</option>
+            <option value="double">雙線 double</option>
+          </select>
+        </div>
+        <div class="mrow">
+          <div class="tog-wrap" onclick="toggleEl('eBorderFlash','on-red')">
+            <button class="tog" id="eBorderFlash"></button>
+            <span class="tog-lbl">邊框隨閃爍</span>
+          </div>
+          <span class="mlbl" style="margin-left:12px">閃爍色</span>
+          <input type="color" id="eBorderFlashColor" value="#ff0000">
+        </div>
       </div>
-      <div class="modal-actions">
-        <button class="modal-btn del" id="modalDel" onclick="deletePreset()">刪除</button>
-        <button class="modal-btn cancel" onclick="closeModal()">取消</button>
-        <button class="modal-btn confirm" onclick="savePreset()">儲存</button>
+
+      <!-- Actions -->
+      <div class="modal-foot">
+        <button class="mbtn del"     id="mDel"    onclick="deletePreset()">刪除</button>
+        <button class="mbtn cancel"              onclick="closeModal()">取消</button>
+        <button class="mbtn confirm"             onclick="savePreset()">儲存</button>
       </div>
     </div>
   </div>
 
   <script>
-    // ── Presets ────────────────────────────────────────────
-    const DEFAULT_PRESETS = [
-      { label: '1 分鐘',  seconds: 60   },
-      { label: '3 分鐘',  seconds: 180  },
-      { label: '5 分鐘',  seconds: 300  },
-      { label: '10 分鐘', seconds: 600  },
-      { label: '15 分鐘', seconds: 900  },
-      { label: '30 分鐘', seconds: 1800 },
-    ];
-    let presets = JSON.parse(localStorage.getItem('obs-presets') || 'null') || DEFAULT_PRESETS;
-    let activePreset = -1;
-    let editIdx = -1;
-
-    function savePresets() { localStorage.setItem('obs-presets', JSON.stringify(presets)); }
-
+    // ── Helpers ───────────────────────────────────────────
+    function pad(n) { return n < 10 ? '0' + n : '' + n; }
+    function fmtTime(sec) {
+      const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+      return (h ? pad(h) + ':' : '') + pad(m) + ':' + pad(s);
+    }
     function fmtDur(sec) {
       if (sec < 60) return sec + '″';
       const m = Math.floor(sec / 60), s = sec % 60;
       return m + (s ? ':' + pad(s) : '') + '′';
     }
 
-    function pad(n) { return n < 10 ? '0' + n : '' + n; }
-
-    function fmtTime(sec) {
-      const h = Math.floor(sec / 3600);
-      const m = Math.floor((sec % 3600) / 60);
-      const s = sec % 60;
-      return (h ? pad(h) + ':' : '') + pad(m) + ':' + pad(s);
+    // ── Toggle util ───────────────────────────────────────
+    function toggleEl(id, onClass) {
+      const el = document.getElementById(id);
+      const cls = onClass || 'on';
+      el.classList.toggle(cls);
+      const lbl = el.nextElementSibling;
+      if (lbl && lbl.classList.contains('tog-lbl')) lbl.style.opacity = el.classList.contains(cls) ? '1' : '.6';
+    }
+    function setTog(id, val, onClass) {
+      const el = document.getElementById(id);
+      const cls = onClass || 'on';
+      el.classList.toggle(cls, val);
+    }
+    function getTog(id, onClass) {
+      return document.getElementById(id).classList.contains(onClass || 'on');
     }
 
+    // ── Presets ───────────────────────────────────────────
+    function mkPreset(label, seconds) {
+      return {
+        label, title: label, seconds,
+        style:  { fg: '#ffffff', bg: 'transparent', font: "ui-monospace,'SF Mono','Courier New',monospace" },
+        flash:  { fg: '#ffffff', bg: '#ff0000', interval: 500, flashOnEnd: true },
+        border: { visible: false, color: '#ffffff', width: 3, radius: 24, style: 'solid', inset: 30, flash: false, flashColor: '#ff0000' },
+      };
+    }
+
+    const DEFAULTS = ['1 分鐘','3 分鐘','5 分鐘','10 分鐘','15 分鐘','30 分鐘']
+      .map((l, i) => mkPreset(l, [60,180,300,600,900,1800][i]));
+
+    let presets     = JSON.parse(localStorage.getItem('obs-presets') || 'null') || DEFAULTS;
+    let activeIdx   = -1;
+    let editIdx     = -1;
+    let st          = null;
+    let clockTick   = null;
+
+    function savePresets() { localStorage.setItem('obs-presets', JSON.stringify(presets)); }
+
+    // ── Pad grid ──────────────────────────────────────────
     function renderPads() {
       const grid = document.getElementById('padGrid');
       grid.innerHTML = '';
-
       presets.forEach((p, i) => {
+        const running = activeIdx === i && st && st.mode === 'timer' && !st.timer.paused;
+        const paused  = activeIdx === i && st && st.mode === 'timer' &&  st.timer.paused;
         const div = document.createElement('div');
-        const isRunning = activePreset === i && st && st.mode === 'timer' && !st.timer.paused;
-        const isPaused  = activePreset === i && st && st.mode === 'timer' && st.timer.paused;
-        div.className = 'pad' + (isRunning ? ' running' : '') + (isPaused ? ' paused-pad' : '');
+        div.className = 'pad' + (running ? ' running' : paused ? ' paused-pad' : '');
         div.innerHTML = `
-          <button class="pad-edit-btn" onclick="event.stopPropagation(); openEdit(${i})">✎</button>
+          <button class="pad-edit-btn" onclick="event.stopPropagation();openEdit(${i})">✎</button>
           <div class="pad-time">${fmtDur(p.seconds)}</div>
-          <div class="pad-name">${p.label}</div>
-        `;
+          <div class="pad-name">${p.label}</div>`;
         div.addEventListener('click', () => triggerPreset(i));
         grid.appendChild(div);
       });
-
-      // Add button
       const add = document.createElement('div');
       add.className = 'pad pad-add';
-      add.innerHTML = '<div class="pad-add-icon">＋</div>';
+      add.innerHTML = '<div style="font-size:28px;color:var(--text2)">＋</div>';
       add.addEventListener('click', () => openEdit(-1));
       grid.appendChild(add);
     }
 
     function triggerPreset(i) {
-      activePreset = i;
+      activeIdx = i;
       const p = presets[i];
-      send({ type: 'timer', seconds: p.seconds, title: p.label });
+      send({
+        type:   'timer',
+        seconds: p.seconds,
+        title:   p.title || p.label,
+        style:   { ...p.style },
+        flash:   { ...p.flash },
+        border:  { ...p.border },
+      });
       renderPads();
     }
 
-    // ── Edit modal ─────────────────────────────────────────
-    function openEdit(i) {
-      editIdx = i;
-      const isNew = i === -1;
-      document.getElementById('modalTitle').textContent = isNew ? '新增預設' : '編輯預設';
-      document.getElementById('modalDel').style.display = isNew ? 'none' : '';
-      const p = isNew ? { label: '', seconds: 300 } : presets[i];
-      document.getElementById('editLabel').value = p.label;
-      document.getElementById('editMin').value   = Math.floor(p.seconds / 60);
-      document.getElementById('editSec').value   = p.seconds % 60;
-      document.getElementById('modal').classList.add('open');
-      document.getElementById('editLabel').focus();
-    }
-
-    function closeModal() { document.getElementById('modal').classList.remove('open'); }
-
-    function savePreset() {
-      const label   = document.getElementById('editLabel').value.trim() || '未命名';
-      const minutes = Number(document.getElementById('editMin').value)  || 0;
-      const secs    = Number(document.getElementById('editSec').value)  || 0;
-      const seconds = minutes * 60 + secs;
-      if (seconds <= 0) return;
-      if (editIdx === -1) presets.push({ label, seconds });
-      else presets[editIdx] = { label, seconds };
-      savePresets();
-      closeModal();
-      renderPads();
-    }
-
-    function deletePreset() {
-      if (editIdx < 0) return;
-      presets.splice(editIdx, 1);
-      savePresets();
-      if (activePreset === editIdx) activePreset = -1;
-      else if (activePreset > editIdx) activePreset--;
-      closeModal();
-      renderPads();
-    }
-
-    document.getElementById('modal').addEventListener('click', e => {
-      if (e.target === document.getElementById('modal')) closeModal();
-    });
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') closeModal();
-      if (e.key === 'Enter' && document.getElementById('modal').classList.contains('open')) savePreset();
-    });
-
-    // ── Commands ───────────────────────────────────────────
+    // ── Commands ──────────────────────────────────────────
     function send(payload) {
       fetch('/api/command', {
         method: 'POST',
@@ -640,113 +495,163 @@
       });
     }
 
-    function switchClock() { activePreset = -1; send({ type: 'clock' }); renderPads(); }
+    function switchClock() { activeIdx = -1; send({ type: 'clock' }); renderPads(); }
 
-    function sendMsg() {
-      const text = document.getElementById('msgInput').value.trim();
-      if (!text) return;
-      activePreset = -1;
-      send({ type: 'text', text, title: '' });
+    function sendTxt() {
+      const v = document.getElementById('txtIn').value.trim();
+      if (!v) return;
+      activeIdx = -1;
+      send({ type: 'text', text: v, title: '' });
+      renderPads();
+    }
+    document.getElementById('txtIn').addEventListener('keydown', e => { if (e.key === 'Enter') sendTxt(); });
+
+    // ── Modal ─────────────────────────────────────────────
+    function openEdit(i) {
+      editIdx = i;
+      const isNew = i < 0;
+      document.getElementById('mTitle').textContent = isNew ? '新增預設' : '編輯預設';
+      document.getElementById('mDel').style.display = isNew ? 'none' : '';
+
+      const p = isNew ? mkPreset('', 300) : presets[i];
+
+      document.getElementById('eLabel').value     = p.label;
+      document.getElementById('eTitle').value     = p.title || '';
+      document.getElementById('eMin').value       = Math.floor(p.seconds / 60);
+      document.getElementById('eSec').value       = p.seconds % 60;
+
+      document.getElementById('eFg').value        = p.style.fg;
+      document.getElementById('eBg').value        = p.style.bg === 'transparent' ? '#000000' : p.style.bg;
+      document.getElementById('eFont').value      = p.style.font;
+
+      setTog('eFlashEnd',  p.flash.flashOnEnd);
+      document.getElementById('eFlashFg').value   = p.flash.fg;
+      document.getElementById('eFlashBg').value   = p.flash.bg;
+      document.getElementById('eFlashMs').value   = p.flash.interval;
+
+      setTog('eBorderVis',   p.border.visible);
+      document.getElementById('eBorderColor').value = p.border.color;
+      document.getElementById('eBorderW').value     = p.border.width;
+      document.getElementById('eBorderR').value     = p.border.radius;
+      document.getElementById('eBorderInset').value = p.border.inset;
+      document.getElementById('eBorderStyle').value = p.border.style;
+      setTog('eBorderFlash', p.border.flash, 'on-red');
+      document.getElementById('eBorderFlashColor').value = p.border.flashColor;
+
+      document.getElementById('overlay').classList.add('open');
+      document.getElementById('eLabel').focus();
+    }
+
+    function closeModal() { document.getElementById('overlay').classList.remove('open'); }
+
+    function savePreset() {
+      const label   = document.getElementById('eLabel').value.trim() || '未命名';
+      const title   = document.getElementById('eTitle').value.trim();
+      const min     = Number(document.getElementById('eMin').value)  || 0;
+      const sec     = Number(document.getElementById('eSec').value)  || 0;
+      const seconds = min * 60 + sec;
+      if (seconds <= 0) { document.getElementById('eMin').focus(); return; }
+
+      const bgRaw = document.getElementById('eBg').value;
+
+      const p = {
+        label, title: title || label, seconds,
+        style: {
+          fg:   document.getElementById('eFg').value,
+          bg:   bgRaw,
+          font: document.getElementById('eFont').value,
+        },
+        flash: {
+          fg:         document.getElementById('eFlashFg').value,
+          bg:         document.getElementById('eFlashBg').value,
+          interval:   Number(document.getElementById('eFlashMs').value) || 500,
+          flashOnEnd: getTog('eFlashEnd'),
+        },
+        border: {
+          visible:    getTog('eBorderVis'),
+          color:      document.getElementById('eBorderColor').value,
+          width:      Number(document.getElementById('eBorderW').value)     || 3,
+          radius:     Number(document.getElementById('eBorderR').value)     || 0,
+          inset:      Number(document.getElementById('eBorderInset').value) || 30,
+          style:      document.getElementById('eBorderStyle').value,
+          flash:      getTog('eBorderFlash', 'on-red'),
+          flashColor: document.getElementById('eBorderFlashColor').value,
+        },
+      };
+
+      if (editIdx < 0) presets.push(p);
+      else presets[editIdx] = p;
+      savePresets();
+      closeModal();
       renderPads();
     }
 
-    document.getElementById('msgInput').addEventListener('keydown', e => {
-      if (e.key === 'Enter') sendMsg();
+    function deletePreset() {
+      if (editIdx < 0) return;
+      presets.splice(editIdx, 1);
+      if (activeIdx === editIdx) activeIdx = -1;
+      else if (activeIdx > editIdx) activeIdx--;
+      savePresets();
+      closeModal();
+      renderPads();
+    }
+
+    document.getElementById('overlay').addEventListener('click', e => {
+      if (e.target === document.getElementById('overlay')) closeModal();
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeModal();
+      if (e.key === 'Enter' && document.getElementById('overlay').classList.contains('open')) {
+        if (document.activeElement.tagName !== 'BUTTON') savePreset();
+      }
     });
 
-    function updateStyle() {
-      const fg = document.getElementById('clrFg').value;
-      const bg = document.getElementById('clrBg').value;
-      send({ type: 'style', fg, bg });
-    }
-
-    let flashOn = false;
-    function toggleFlash() {
-      flashOn = !flashOn;
-      const toggle = document.getElementById('flashToggle');
-      toggle.classList.toggle('on', flashOn);
-      document.getElementById('flashLabel').textContent = flashOn ? 'ON' : 'OFF';
-      pushFlashSettings(flashOn);
-    }
-
-    function pushFlashSettings(active) {
-      send({
-        type:     'flash',
-        fg:       document.getElementById('flashFg').value,
-        bg:       document.getElementById('flashBg').value,
-        interval: Number(document.getElementById('flashMs').value) || 500,
-        active,
-      });
-    }
-
-    ['flashFg','flashBg','flashMs'].forEach(id => {
-      document.getElementById(id).addEventListener('change', () => {
-        if (flashOn) pushFlashSettings(true);
-        else send({ type:'flash', fg: document.getElementById('flashFg').value, bg: document.getElementById('flashBg').value, interval: Number(document.getElementById('flashMs').value)||500 });
-      });
-    });
-
-    // ── SSE & UI sync ──────────────────────────────────────
-    let st = null;
-    let clockTick = null;
-
-    const MODE_LABELS = { clock: '時鐘模式', timer: '倒數計時', text: '文字顯示', hidden: '已隱藏' };
+    // ── SSE ───────────────────────────────────────────────
+    const MODES = { clock:'時鐘模式', timer:'倒數計時', text:'文字顯示', hidden:'已隱藏' };
 
     function updateUI(s) {
       st = s;
+      const nowTime  = document.getElementById('nowTime');
+      const fill     = document.getElementById('progFill');
+      const paused   = document.getElementById('pausedHint');
 
-      const nowMain   = document.getElementById('nowMain');
-      const fill      = document.getElementById('progressFill');
-      const pausedTag = document.getElementById('pausedTag');
-
-      // Main display
       if (s.mode === 'clock') {
-        if (!clockTick) {
-          clockTick = setInterval(() => {
-            const d = new Date();
-            nowMain.textContent = pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
-          }, 500);
-        }
-        fill.style.width = '0%';
-        fill.classList.remove('paused');
+        if (!clockTick) clockTick = setInterval(() => {
+          const d = new Date();
+          nowTime.textContent = pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+        }, 500);
+        fill.style.width = '0%'; fill.classList.remove('paused');
       } else {
         if (clockTick) { clearInterval(clockTick); clockTick = null; }
         if (s.mode === 'timer') {
-          nowMain.textContent = fmtTime(s.timer.remaining);
-          const pct = s.timer.total > 0 ? ((s.timer.total - s.timer.remaining) / s.timer.total * 100) : 0;
+          nowTime.textContent = fmtTime(s.timer.remaining);
+          const pct = s.timer.total > 0 ? (s.timer.total - s.timer.remaining) / s.timer.total * 100 : 0;
           fill.style.width = pct + '%';
           fill.classList.toggle('paused', s.timer.paused);
         } else {
-          nowMain.textContent = s.mode === 'text' ? (s.text.length > 12 ? s.text.slice(0,12)+'…' : s.text) : '—';
-          fill.style.width = '0%';
-          fill.classList.remove('paused');
+          const label = s.mode === 'text' ? (s.text.length > 14 ? s.text.slice(0,14) + '…' : s.text) : '—';
+          nowTime.textContent = label;
+          fill.style.width = '0%'; fill.classList.remove('paused');
         }
       }
 
-      pausedTag.classList.toggle('visible', s.mode === 'timer' && s.timer.paused);
-      document.getElementById('nowModeTag').textContent = MODE_LABELS[s.mode] || s.mode;
-      document.getElementById('nowLabel').textContent   = s.title || '';
-
-      // Flash state sync from server
-      if (s.flash.active !== flashOn) {
-        flashOn = s.flash.active;
-        document.getElementById('flashToggle').classList.toggle('on', flashOn);
-        document.getElementById('flashLabel').textContent = flashOn ? 'ON' : 'OFF';
-      }
+      paused.classList.toggle('show', s.mode === 'timer' && s.timer.paused);
+      document.getElementById('nowMode').textContent = MODES[s.mode] || s.mode;
+      document.getElementById('nowLbl').textContent  = s.title || '';
 
       renderPads();
     }
 
     function connect() {
       const es = new EventSource('/events');
-      es.onopen = () => {
+      es.onopen    = () => {
         document.getElementById('dot').className      = 'dot live';
-        document.getElementById('connText').textContent = '已連線';
+        document.getElementById('connTxt').textContent = '已連線';
       };
       es.onmessage = e => updateUI(JSON.parse(e.data));
       es.onerror   = () => {
         document.getElementById('dot').className       = 'dot dead';
-        document.getElementById('connText').textContent = '連線中斷';
+        document.getElementById('connTxt').textContent  = '連線中斷';
         es.close();
         setTimeout(connect, 2000);
       };

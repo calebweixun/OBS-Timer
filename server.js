@@ -6,12 +6,14 @@ const PORT = Number(process.env.PORT) || 8080;
 
 // ── Server state ───────────────────────────────────────────
 const state = {
-  mode:  'clock',   // clock | timer | text | hidden
-  timer: { total: 0, remaining: 0, paused: false },
-  text:  '',
-  title: '',
-  style: { fg: '#ffffff', bg: 'transparent' },
-  flash: { active: false, bg: '#ff0000', fg: '#ffffff', interval: 500 },
+  mode:       'clock',
+  timer:      { total: 0, remaining: 0, paused: false },
+  text:       '',
+  title:      '',
+  style:      { fg: '#ffffff', bg: 'transparent', font: "ui-monospace,'SF Mono','Courier New',monospace" },
+  flash:      { active: false, fg: '#ffffff', bg: '#ff0000', interval: 500 },
+  flashOnEnd: true,
+  border:     { visible: false, color: '#ffffff', width: 3, radius: 24, style: 'solid', inset: 30, flash: false, flashColor: '#ff0000' },
 };
 
 // ── SSE clients ────────────────────────────────────────────
@@ -22,7 +24,7 @@ function broadcast() {
   for (const res of clients) res.write(msg);
 }
 
-// ── Timer tick (server-side) ───────────────────────────────
+// ── Timer tick ─────────────────────────────────────────────
 let tick = null;
 
 function stopTick() {
@@ -38,7 +40,7 @@ function startTick() {
     }
     if (state.timer.remaining === 0) {
       stopTick();
-      state.flash.active = true;
+      if (state.flashOnEnd) state.flash.active = true;
       broadcast();
     }
   }, 1000);
@@ -47,14 +49,22 @@ function startTick() {
 // ── Command handler ────────────────────────────────────────
 function handle(cmd) {
   switch (cmd.type) {
+
     case 'timer':
       stopTick();
-      state.mode          = 'timer';
-      state.flash.active  = false;
-      state.timer.total   = Number(cmd.seconds) || 0;
+      state.mode            = 'timer';
+      state.flash.active    = false;
+      state.timer.total     = Number(cmd.seconds) || 0;
       state.timer.remaining = state.timer.total;
-      state.timer.paused  = false;
-      if (cmd.title !== undefined) state.title = cmd.title;
+      state.timer.paused    = false;
+      if (cmd.title  !== undefined) state.title = cmd.title;
+      if (cmd.style)  Object.assign(state.style, cmd.style);
+      if (cmd.border) Object.assign(state.border, cmd.border);
+      if (cmd.flash) {
+        state.flashOnEnd = cmd.flash.flashOnEnd !== false;
+        const { flashOnEnd, ...fs } = cmd.flash;
+        Object.assign(state.flash, fs, { active: false });
+      }
       if (state.timer.total > 0) startTick();
       break;
 
@@ -91,7 +101,7 @@ function handle(cmd) {
       stopTick();
       state.mode         = 'text';
       state.flash.active = false;
-      state.text         = cmd.text || '';
+      state.text         = cmd.text  || '';
       if (cmd.title !== undefined) state.title = cmd.title;
       break;
 
@@ -102,8 +112,9 @@ function handle(cmd) {
       break;
 
     case 'style':
-      if (cmd.fg !== undefined) state.style.fg = cmd.fg;
-      if (cmd.bg !== undefined) state.style.bg = cmd.bg;
+      if (cmd.fg   !== undefined) state.style.fg   = cmd.fg;
+      if (cmd.bg   !== undefined) state.style.bg   = cmd.bg;
+      if (cmd.font !== undefined) state.style.font = cmd.font;
       break;
 
     case 'flash':
@@ -111,6 +122,11 @@ function handle(cmd) {
       if (cmd.bg       !== undefined) state.flash.bg       = cmd.bg;
       if (cmd.interval !== undefined) state.flash.interval = Number(cmd.interval);
       if (cmd.active   !== undefined) state.flash.active   = Boolean(cmd.active);
+      break;
+
+    case 'border':
+      Object.assign(state.border, cmd);
+      delete state.border.type;
       break;
   }
   broadcast();
@@ -127,7 +143,6 @@ http.createServer((req, res) => {
   const urlObj   = new URL(req.url, 'http://localhost');
   const pathname = urlObj.pathname;
 
-  // SSE
   if (pathname === '/events') {
     res.writeHead(200, {
       'Content-Type':  'text/event-stream',
@@ -140,7 +155,6 @@ http.createServer((req, res) => {
     return;
   }
 
-  // Command API
   if (pathname === '/api/command' && req.method === 'POST') {
     let body = '';
     req.on('data', d => body += d);
@@ -152,7 +166,6 @@ http.createServer((req, res) => {
     return;
   }
 
-  // Static files — alias legacy routes
   const aliases = { '/': '/remote.html', '/index.html': '/remote.html', '/clock.html': '/playclock.html' };
   const file = path.join(__dirname, aliases[pathname] || pathname);
   const ext  = path.extname(file);

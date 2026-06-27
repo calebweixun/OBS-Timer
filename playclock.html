@@ -7,6 +7,13 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; background: transparent; }
 
+    #border-frame {
+      position: fixed;
+      pointer-events: none;
+      display: none;
+      z-index: 10;
+    }
+
     #center {
       position: fixed;
       top: 50%; left: 50%;
@@ -14,7 +21,9 @@
       display: flex;
       flex-direction: column;
       align-items: center;
+      z-index: 5;
     }
+
     #title {
       font-family: -apple-system, 'Helvetica Neue', sans-serif;
       font-size: 5vw;
@@ -23,6 +32,7 @@
       white-space: nowrap;
       text-align: center;
     }
+
     #output {
       font-family: ui-monospace, 'SF Mono', 'Courier New', monospace;
       font-size: 18vw;
@@ -31,10 +41,13 @@
       white-space: nowrap;
       font-variant-numeric: tabular-nums;
     }
-    body.is-hidden #center { visibility: hidden; }
+
+    body.is-hidden #center,
+    body.is-hidden #border-frame { visibility: hidden; }
   </style>
 </head>
 <body translate="no">
+  <div id="border-frame"></div>
   <div id="center">
     <div id="title"></div>
     <div id="output"></div>
@@ -43,6 +56,7 @@
   <script>
     const titleEl  = document.getElementById('title');
     const outputEl = document.getElementById('output');
+    const borderEl = document.getElementById('border-frame');
 
     function pad(n) { return n < 10 ? '0' + n : '' + n; }
 
@@ -53,7 +67,7 @@
       return (h > 0 ? pad(h) + ':' : '') + pad(m) + ':' + pad(s);
     }
 
-    // ── Clock (client-side) ──
+    // ── Clock ──
     let clockTick = null;
     function startClock() {
       if (clockTick) return;
@@ -66,54 +80,70 @@
       if (clockTick) { clearInterval(clockTick); clockTick = null; }
     }
 
-    // ── Flash (client-side) ──
-    let flashTick  = null;
-    let flashState = false;
-    let lastFlashActive = false;
+    // ── Flash ──
+    let flashTick        = null;
+    let flashState       = false;
+    let lastFlashActive  = false;
 
-    function startFlash(fg, bg, interval) {
+    function startFlash(st) {
       if (flashTick) clearInterval(flashTick);
       flashState = false;
+      const { fg, bg, interval } = st.flash;
+      const bFlash = st.border.visible && st.border.flash;
+
       flashTick = setInterval(() => {
         flashState = !flashState;
         document.body.style.background = flashState ? bg  : fg;
         outputEl.style.color           = flashState ? fg  : bg;
         titleEl.style.color            = flashState ? fg  : bg;
+        if (bFlash) {
+          borderEl.style.borderColor = flashState ? st.border.flashColor : st.border.color;
+        }
       }, interval);
     }
 
-    function stopFlash() {
+    function stopFlash(st) {
       if (flashTick) { clearInterval(flashTick); flashTick = null; }
-      document.body.style.background = '';
-      outputEl.style.color = '';
-      titleEl.style.color  = '';
+      if (!st) return;
+      document.body.style.background = st.style.bg;
+      outputEl.style.color           = st.style.fg;
+      titleEl.style.color            = st.style.fg;
+      if (st.border.visible) borderEl.style.borderColor = st.border.color;
     }
 
-    // ── Render state ──
+    // ── Border ──
+    function updateBorder(b) {
+      if (!b.visible) { borderEl.style.display = 'none'; return; }
+      borderEl.style.display      = 'block';
+      borderEl.style.inset        = b.inset + 'px';
+      borderEl.style.border       = b.width + 'px ' + b.style + ' ' + b.color;
+      borderEl.style.borderRadius = b.radius + 'px';
+    }
+
+    // ── Render ──
     function render(st) {
-      // Background / text color from style
+      // Base style (when not flashing)
       if (!st.flash.active) {
         document.body.style.background = st.style.bg;
-        outputEl.style.color  = st.style.fg;
-        titleEl.style.color   = st.style.fg;
+        outputEl.style.color           = st.style.fg;
+        titleEl.style.color            = st.style.fg;
       }
+
+      // Font (output only — title stays system sans)
+      outputEl.style.fontFamily = st.style.font || '';
 
       // Title
-      if (st.title) {
-        titleEl.innerText     = st.title;
-        titleEl.style.display = '';
-      } else {
-        titleEl.style.display = 'none';
-      }
+      titleEl.innerText     = st.title || '';
+      titleEl.style.display = st.title ? '' : 'none';
 
-      // Flash
+      // Border
+      updateBorder(st.border);
+
+      // Flash — only toggle on active state change
       if (st.flash.active && !lastFlashActive) {
-        startFlash(st.flash.fg, st.flash.bg, st.flash.interval);
+        startFlash(st);
       } else if (!st.flash.active && lastFlashActive) {
-        stopFlash();
-        document.body.style.background = st.style.bg;
-        outputEl.style.color = st.style.fg;
-        titleEl.style.color  = st.style.fg;
+        stopFlash(st);
       }
       lastFlashActive = st.flash.active;
 
@@ -125,17 +155,13 @@
         startClock();
       } else {
         stopClock();
-        if (st.mode === 'timer') {
-          outputEl.innerText = fmtTime(st.timer.remaining);
-        } else if (st.mode === 'text') {
-          outputEl.innerText = st.text;
-        } else {
-          outputEl.innerText = '';
-        }
+        if      (st.mode === 'timer') outputEl.innerText = fmtTime(st.timer.remaining);
+        else if (st.mode === 'text')  outputEl.innerText = st.text;
+        else                          outputEl.innerText = '';
       }
     }
 
-    // ── SSE connection ──
+    // ── SSE ──
     function connect() {
       const es = new EventSource('/events');
       es.onmessage = e => render(JSON.parse(e.data));
