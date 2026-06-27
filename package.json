@@ -26,7 +26,8 @@
       "remote.html",
       "playclock.html",
       "index.html",
-      "start.sh"
+      "start.sh",
+      "build/icon.png"
     ],
     "mac": {
       "category": "public.app-category.utilities",
